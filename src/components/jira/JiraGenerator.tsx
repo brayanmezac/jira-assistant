@@ -1,0 +1,48 @@
+'use client';
+
+import { useFormState } from 'react-dom';
+import { generateJiraTicketsAction, type FormState } from '@/app/actions';
+import { GeneratorForm } from './GeneratorForm';
+import { GeneratedContent } from './GeneratedContent';
+import { useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+import { AlertTriangle } from 'lucide-react';
+
+const initialState: FormState = {
+  success: false,
+  message: '',
+};
+
+export function JiraGenerator() {
+  const [state, formAction] = useFormState(
+    generateJiraTicketsAction,
+    initialState
+  );
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (!state.success && state.message) {
+      toast({
+        variant: 'destructive',
+        title: 'An error occurred',
+        description: state.message,
+      });
+    }
+  }, [state, toast]);
+
+  return (
+    <div>
+      <GeneratorForm formAction={formAction} initialState={initialState} />
+      {state.success && state.data ? (
+        <GeneratedContent epic={state.data.epic} story={state.data.story} />
+      ) : !state.success && state.message ? (
+         <Alert variant="destructive" className="mt-8">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Generation Failed</AlertTitle>
+            <AlertDescription>{state.message}</AlertDescription>
+         </Alert>
+      ) : null}
+    </div>
+  );
+}
