@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const jiraStoryFormSchema = z.object({
   name: z.string().min(3, { message: 'Story name must be at least 3 characters.' }),
-  description: z.string().min(10, { message: 'Description must be at least 10 characters.' }),
+  description: z.string(),
   number: z.coerce.number().int().positive({ message: 'Story number must be a positive number.' }),
   project: z.string().nonempty({ message: 'Please select a project.' }),
 });
