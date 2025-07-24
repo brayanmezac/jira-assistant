@@ -46,6 +46,8 @@ import {
   DialogTrigger,
   DialogClose,
 } from '@/components/ui/dialog';
+import { useSettings } from '@/hooks/use-settings';
+import { validateJiraProject } from '@/app/actions';
 
 export function ProjectCodes({
   initialProjects,
@@ -59,6 +61,7 @@ export function ProjectCodes({
   const [editingProject, setEditingProject] = useState<ProjectCode | null>(
     null
   );
+  const { settings } = useSettings();
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -82,12 +85,29 @@ export function ProjectCodes({
       return;
     }
 
+    // --- JIRA VALIDATION ---
+    const validationResult = await validateJiraProject({
+      projectCode: validatedFields.data.code,
+      settings,
+    });
+
+    if (!validationResult.success) {
+      toast({
+        variant: 'destructive',
+        title: 'Jira Validation Failed',
+        description: validationResult.message || 'Could not validate the project in Jira.',
+      });
+      setLoading(false);
+      return;
+    }
+    // --- END JIRA VALIDATION ---
+
     try {
       const newProject = await addProjectCode(validatedFields.data);
 
       toast({
         title: '✅ Success!',
-        description: 'Project code added successfully.',
+        description: 'Project code added successfully after validation.',
       });
       setProjects((p) =>
         [newProject, ...p].sort((a, b) => a.name.localeCompare(b.name))
@@ -108,6 +128,8 @@ export function ProjectCodes({
   const handleEditSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!editingProject) return;
+    
+    setLoading(true);
 
     const formData = new FormData(event.currentTarget);
     const updatedData = {
@@ -123,8 +145,26 @@ export function ProjectCodes({
         title: '❌ Error',
         description: 'Code and Name are required.',
       });
+      setLoading(false);
       return;
     }
+
+    // --- JIRA VALIDATION ON EDIT ---
+     const validationResult = await validateJiraProject({
+      projectCode: validatedFields.data.code,
+      settings,
+    });
+
+    if (!validationResult.success) {
+      toast({
+        variant: 'destructive',
+        title: 'Jira Validation Failed',
+        description: validationResult.message || 'Could not validate the project in Jira.',
+      });
+      setLoading(false);
+      return;
+    }
+    // --- END JIRA VALIDATION ---
 
     try {
       await updateProjectCode(editingProject.id, validatedFields.data);
@@ -149,6 +189,8 @@ export function ProjectCodes({
         title: '❌ Error updating project',
         description: 'An error occurred. Check the developer console for details.',
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -175,7 +217,7 @@ export function ProjectCodes({
       <CardHeader>
         <CardTitle>Project Codes</CardTitle>
         <CardDescription>
-          Add, edit, and manage the Jira project codes and names.
+          Add, edit, and manage the Jira project codes. Each code is validated against Jira before being saved.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -270,7 +312,10 @@ export function ProjectCodes({
                                 Cancel
                               </Button>
                             </DialogClose>
-                            <Button type="submit">Save changes</Button>
+                            <Button type="submit" disabled={loading}>
+                              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                              Save changes
+                            </Button>
                           </DialogFooter>
                         </form>
                       </DialogContent>

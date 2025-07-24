@@ -3,7 +3,6 @@
 import { z } from 'zod';
 import { jiraStoryFormSchema, jiraSettingsSchema } from '@/lib/types';
 import { getTaskCodes, getProjectCodes } from '@/lib/firebase';
-import { revalidatePath } from 'next/cache';
 
 export type FormState = {
   success: boolean;
@@ -37,17 +36,6 @@ export async function generateJiraTicketsAction(
   const { name, description, number, project } = validatedFields.data;
 
   try {
-    let epicDescription = '';
-    let storyDescription = '';
-
-    if (description) {
-      epicDescription = description;
-      storyDescription = description;
-    } else {
-      epicDescription = `Epic for: ${name}`;
-      storyDescription = `Story for: ${name}`;
-    }
-
     const projects = await getProjectCodes();
     const projectInfo = projects.find(p => p.name === project);
     
@@ -61,6 +49,16 @@ export async function generateJiraTicketsAction(
     const projectKey = projectInfo.code;
     console.log(`[PROJECT DEBUG] Using project key: "${projectKey}" for project name: "${project}"`);
 
+    let epicDescription = '';
+    let storyDescription = '';
+
+    if (description) {
+      epicDescription = description;
+      storyDescription = description;
+    } else {
+      epicDescription = `Epic for: ${name}`;
+      storyDescription = `Story for: ${name}`;
+    }
 
     return {
       success: true,
@@ -73,11 +71,10 @@ export async function generateJiraTicketsAction(
       },
     };
   } catch (error: any) {
-    const errorMessage = error.message || 'An unknown error occurred during AI generation.';
     console.error('Error in generateJiraTicketsAction:', error);
     return {
       success: false,
-      message: `An error occurred while generating the Jira tickets. Please try again. (Details: ${errorMessage})`,
+      message: `An error occurred while generating the Jira tickets. Please try again. (Details: ${error.message})`,
     };
   }
 }
@@ -205,4 +202,72 @@ export async function createJiraTickets(input: CreateJiraTicketsInput): Promise<
         console.error('[JIRA DEBUG] An unexpected error occurred during ticket creation:', error);
         return { success: false, message: `An unexpected error occurred: ${error.message}` };
     }
+}
+
+
+type ValidationResult = {
+  success: boolean;
+  message?: string;
+};
+
+const validationInputSchema = z.object({
+  projectCode: z.string(),
+  settings: jiraSettingsSchema,
+});
+
+export async function validateJiraProject(
+  input: z.infer<typeof validationInputSchema>
+): Promise<ValidationResult> {
+  const { projectCode, settings } = input;
+  const { url, email, token } = settings;
+
+  if (!url || !email || !token) {
+    return {
+      success: false,
+      message: 'Jira settings are not configured.',
+    };
+  }
+
+  const auth = Buffer.from(`${email}:${token}`).toString('base64');
+  const headers = {
+    Authorization: `Basic ${auth}`,
+    'Content-Type': 'application/json',
+  };
+
+  try {
+    const response = await fetch(`${url}/rest/api/2/project/${projectCode}`, {
+      method: 'GET',
+      headers,
+    });
+
+    if (response.ok) {
+      return { success: true };
+    }
+
+    if (response.status === 404) {
+      return {
+        success: false,
+        message: `Project with code "${projectCode}" not found in Jira.`,
+      };
+    }
+
+    if (response.status === 401 || response.status === 403) {
+      return {
+        success: false,
+        message: 'Authentication failed. Check your email and API token in settings.',
+      };
+    }
+    
+    const errorText = await response.text();
+    return {
+      success: false,
+      message: `Jira API error: ${response.statusText}. ${errorText}`,
+    };
+  } catch (error: any) {
+    console.error('[JIRA VALIDATION ERROR]', error);
+    return {
+      success: false,
+      message: `Failed to connect to Jira. Check the URL and your network connection. Error: ${error.message}`,
+    };
+  }
 }
