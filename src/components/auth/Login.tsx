@@ -18,29 +18,20 @@ export function Login() {
   const router = useRouter();
 
   useEffect(() => {
-    // This effect should only run once when the component mounts and auth is ready.
-    if (authLoading) {
-      return; // Wait until the AuthProvider has determined the initial auth state.
-    }
-    
-    // If there is already a user, AuthProvider will handle the redirect.
+    if (authLoading) return;
     if (user) {
       setIsProcessingRedirect(false);
-      return;
+      return; 
     }
 
     const processRedirect = async () => {
       try {
         const result = await getRedirectResult(auth);
         if (result) {
-          // A user has successfully signed in via redirect.
-          // The onAuthStateChanged listener in AuthProvider will now pick up the new user
-          // and handle the redirect to the main application. We don't need to do it here.
-          // We can simply stop showing the loading state.
+          // User is signed in. AuthProvider will handle the redirect.
         }
       } catch (redirectError: any) {
         console.error('Error getting redirect result:', redirectError);
-        // Make the error visible to the user on the login page.
         setError(`Login failed: ${redirectError.message} (Code: ${redirectError.code})`);
       } finally {
         setIsProcessingRedirect(false);
@@ -51,21 +42,20 @@ export function Login() {
 
   }, [authLoading, user]);
 
-  const handleSignIn = async () => {
+  const handleAuthAction = async () => {
     setIsSigningIn(true);
     setError(null);
     const provider = new GoogleAuthProvider();
     try {
-      // We don't need to await this. The browser will navigate away.
       await signInWithRedirect(auth, provider);
+      // The browser will redirect, so no further action is needed here.
     } catch (signInError: any) {
       console.error('Error starting sign-in with redirect:', signInError);
-      setError(signInError.message);
+      setError(`An error occurred: ${signInError.message}`);
       setIsSigningIn(false);
     }
   };
   
-  // Show a loading spinner while checking for redirect result or if auth is loading.
   if (isProcessingRedirect || authLoading) {
     return (
         <div className="flex min-h-screen items-center justify-center bg-background">
@@ -74,8 +64,6 @@ export function Login() {
     );
   }
 
-  // Do not render the login form if a user is already authenticated
-  // and AuthProvider is about to redirect.
   if (user) {
     return (
         <div className="flex min-h-screen items-center justify-center bg-background">
@@ -91,20 +79,25 @@ export function Login() {
             <div className="flex justify-center mb-4">
                 <AppLogo />
             </div>
-          <CardTitle className="text-2xl">Welcome to Jira Assist</CardTitle>
+          <CardTitle className="text-2xl">Jira Assist</CardTitle>
           <CardDescription>
-            Sign in with your Google account to continue.
+            Register or sign in with your Google account.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Button className="w-full" onClick={handleSignIn} disabled={isSigningIn}>
-            {(isSigningIn) ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : null}
-            Sign in with Google
-          </Button>
+          <div className="grid grid-cols-1 gap-4">
+            <Button onClick={handleAuthAction} disabled={isSigningIn}>
+              {isSigningIn ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Register with Google
+            </Button>
+            <Button onClick={handleAuthAction} disabled={isSigningIn}>
+              {isSigningIn ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Login with Google
+            </Button>
+          </div>
+
           {error && (
-            <p className="text-sm text-destructive text-center">{error}</p>
+            <p className="text-sm text-destructive text-center p-2 bg-destructive/10 rounded-md">{error}</p>
           )}
         </CardContent>
       </Card>
