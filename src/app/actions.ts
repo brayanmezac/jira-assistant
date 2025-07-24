@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { generateJiraEpic } from '@/ai/flows/generate-jira-epic';
 import { generateJiraStory } from '@/ai/flows/generate-jira-story';
 import { jiraStoryFormSchema, jiraSettingsSchema, projectCodeSchema, taskCodeSchema } from '@/lib/types';
-import { getSubtasks, getProjectCodes } from '@/lib/firebase';
+import { getTaskCodes, getProjectCodes } from '@/lib/firebase';
 import { addDoc, collection, getDocs, orderBy, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { revalidatePath } from 'next/cache';
@@ -165,7 +165,7 @@ export async function createJiraTickets(input: CreateJiraTicketsInput): Promise<
         const storyKey = storyData.key;
         
         // Step 3: Create Sub-tasks
-        const subtaskList = await getSubtasks();
+        const subtaskList = await getTaskCodes();
         for (const subtask of subtaskList) {
           const subtaskPayload = {
             fields: {

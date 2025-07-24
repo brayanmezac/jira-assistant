@@ -39,14 +39,3 @@ export async function getProjectCodes(): Promise<ProjectCode[]> {
     })) as TaskCode[];
     return tasksList;
   }
-
-  export async function getSubtasks(): Promise<TaskCode[]> {
-    const tasksCol = collection(db, 'taskCodes');
-    const q = query(tasksCol, orderBy('name', 'asc'));
-    const tasksSnapshot = await getDocs(q);
-    const tasksList = tasksSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as TaskCode[];
-    return tasksList;
-  }

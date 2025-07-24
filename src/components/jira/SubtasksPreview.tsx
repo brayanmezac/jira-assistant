@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getSubtasks } from '@/lib/firebase';
+import { getTaskCodes } from '@/lib/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckSquare, Loader2 } from 'lucide-react';
 import type { TaskCode } from '@/lib/types';
@@ -14,7 +14,7 @@ export function SubtasksPreview() {
   useEffect(() => {
     const fetchTasks = async () => {
       setLoading(true);
-      const fetchedTasks = await getSubtasks();
+      const fetchedTasks = await getTaskCodes();
       setTasks(fetchedTasks);
       setLoading(false);
     };
