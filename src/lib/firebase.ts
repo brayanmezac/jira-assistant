@@ -1,5 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore, collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 import type { ProjectCode, TaskCode } from './types';
 
 const firebaseConfig = {
@@ -14,6 +15,8 @@ const firebaseConfig = {
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 export const db = getFirestore(app);
+export const auth = getAuth(app);
+
 
 export async function getProjectCodes(): Promise<ProjectCode[]> {
     const projectsCol = collection(db, 'projectCodes');

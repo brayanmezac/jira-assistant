@@ -3,7 +3,9 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { z } from 'zod';
-import { jiraStoryFormSchema } from '@/lib/types';
+import { jiraStoryFormSchema, type ProjectCode } from '@/lib/types';
+import { useEffect, useState } from 'react';
+import { getProjectCodes } from '@/lib/firebase';
 
 import {
   Form,
@@ -33,13 +35,19 @@ type GeneratorFormProps = {
 };
 
 export function GeneratorForm({ formAction, initialState }: GeneratorFormProps) {
+    const [projects, setProjects] = useState<ProjectCode[]>([]);
+
+    useEffect(() => {
+        getProjectCodes().then(setProjects);
+    }, []);
+
   const form = useForm<z.infer<typeof jiraStoryFormSchema>>({
     resolver: zodResolver(jiraStoryFormSchema),
     defaultValues: {
       name: '',
       description: '',
       number: undefined,
-      project: 'Tablero Proyecto Prueba 2.0',
+      project: '',
     },
     context: initialState,
   });
@@ -70,9 +78,11 @@ export function GeneratorForm({ formAction, initialState }: GeneratorFormProps) 
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="Tablero Proyecto Prueba 2.0">
-                        Tablero Proyecto Prueba 2.0
-                      </SelectItem>
+                      {projects.map(project => (
+                        <SelectItem key={project.id} value={project.name}>
+                            {project.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />

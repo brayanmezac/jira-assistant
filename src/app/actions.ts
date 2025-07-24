@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { generateJiraEpic } from '@/ai/flows/generate-jira-epic';
 import { generateJiraStory } from '@/ai/flows/generate-jira-story';
 import { jiraStoryFormSchema, jiraSettingsSchema, projectCodeSchema, taskCodeSchema } from '@/lib/types';
-import { getSubtasks } from '@/lib/firebase';
+import { getSubtasks, getProjectCodes } from '@/lib/firebase';
 import { addDoc, collection, getDocs, orderBy, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { revalidatePath } from 'next/cache';
@@ -56,6 +56,12 @@ export async function generateJiraTicketsAction(
         numero: number,
       }),
     ]);
+
+    const projects = await getProjectCodes();
+    const projectInfo = projects.find(p => p.name === project);
+    const projectKey = projectInfo?.code || project.split(' ')[0];
+
+
     return {
       success: true,
       message: 'Successfully generated content.',
@@ -63,7 +69,7 @@ export async function generateJiraTicketsAction(
         epic: epicResult.epicDescription,
         story: storyResult.jiraStory,
         storyName: name,
-        projectKey: project.split(' ')[0]
+        projectKey: projectKey
       },
     };
   } catch (error) {
