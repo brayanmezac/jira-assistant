@@ -1,8 +1,6 @@
 'use server';
 
 import { z } from 'zod';
-import { generateJiraEpic } from '@/ai/flows/generate-jira-epic';
-import { generateJiraStory } from '@/ai/flows/generate-jira-story';
 import { jiraStoryFormSchema, jiraSettingsSchema } from '@/lib/types';
 import { getTaskCodes, getProjectCodes } from '@/lib/firebase';
 import { revalidatePath } from 'next/cache';
@@ -42,9 +40,6 @@ export async function generateJiraTicketsAction(
     let epicDescription = '';
     let storyDescription = '';
 
-    // If description is empty, use the story name as a placeholder.
-    // If not empty, use the provided description directly.
-    // This avoids the AI call that is failing due to permissions.
     if (description) {
       epicDescription = description;
       storyDescription = description;
@@ -106,7 +101,6 @@ export async function createJiraTickets(input: CreateJiraTicketsInput): Promise<
     const { epicSummary, epicDescription, storySummary, storyDescription, projectKey, settings } = input;
     const { url, email, token } = settings;
 
-    // Basic validation to ensure settings are present
     if (!url || !email || !token) {
         return { success: false, message: "Jira connection settings are incomplete. Please check your settings." };
     }
@@ -119,14 +113,13 @@ export async function createJiraTickets(input: CreateJiraTicketsInput): Promise<
     };
     
     try {
-        // Step 1: Create Epic
         const epicPayload = {
             fields: {
                 project: { key: projectKey },
                 summary: epicSummary,
                 description: epicDescription,
                 issuetype: { name: 'Epic' },
-                customfield_10011: epicSummary // 'Epic Name' custom field
+                customfield_10011: epicSummary 
             }
         };
 
@@ -148,14 +141,13 @@ export async function createJiraTickets(input: CreateJiraTicketsInput): Promise<
         console.log('[JIRA DEBUG] Epic created successfully:', epicData);
 
 
-        // Step 2: Create Story
         const storyPayload = {
             fields: {
                 project: { key: projectKey },
                 summary: storySummary,
                 description: storyDescription,
                 issuetype: { name: 'Story' },
-                customfield_10014: epicKey // 'Epic Link' custom field
+                customfield_10014: epicKey 
             }
         };
         
@@ -176,7 +168,6 @@ export async function createJiraTickets(input: CreateJiraTicketsInput): Promise<
         const storyKey = storyData.key;
         console.log('[JIRA DEBUG] Story created successfully:', storyData);
         
-        // Step 3: Create Sub-tasks
         const subtaskList = await getTaskCodes();
         console.log(`[JIRA DEBUG] Found ${subtaskList.length} sub-tasks to create.`);
         for (const subtask of subtaskList) {
