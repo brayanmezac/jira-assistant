@@ -33,9 +33,11 @@ export async function getUserSettings(userId: string): Promise<JiraSettings | nu
     return null;
 }
 
-export async function updateUserSettings(userId: string, settings: Partial<JiraSettings>) {
+export async function updateUserSettings(userId: string, settings: JiraSettings) {
     const docRef = doc(db, 'userSettings', userId);
-    await setDoc(docRef, settings, { merge: true });
+    // Use setDoc without merge to ensure the entire object is overwritten.
+    // This prevents stale fields from remaining if they are removed from the settings object.
+    await setDoc(docRef, settings);
 }
 
 

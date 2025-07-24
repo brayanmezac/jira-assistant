@@ -22,8 +22,6 @@ export function useSettings() {
   // Effect to load settings from Firestore when user is available
   useEffect(() => {
     if (!user) {
-        // If there's no user, we can stop loading and use defaults.
-        // Or wait, but for now, let's stop.
         setLoading(false);
         return;
     };
@@ -67,15 +65,15 @@ export function useSettings() {
 
   }, [user]);
 
-  const setSettings = useCallback(async (newSettings: Partial<JiraSettings>) => {
+  const setSettings = useCallback(async (newSettings: JiraSettings) => {
     if (!user) {
         console.error("Cannot save settings, no user is authenticated.");
         return;
     }
 
     try {
-      const mergedSettings = { ...settings, ...newSettings };
-      const validatedSettings = jiraSettingsSchema.parse(mergedSettings);
+      // The incoming newSettings object from the form should be complete.
+      const validatedSettings = jiraSettingsSchema.parse(newSettings);
       
       // Optimistically update the state
       setSettingsState(validatedSettings);
@@ -89,7 +87,7 @@ export function useSettings() {
         console.error("Zod validation errors:", error.errors);
       }
     }
-  }, [user, settings]);
+  }, [user]);
 
   return { settings, setSettings, loading };
 }
