@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Pencil, Trash2 } from 'lucide-react';
 import type { ProjectCode } from '@/lib/types';
 import {
     Table,
@@ -116,6 +116,7 @@ export function ProjectCodes({ initialProjects }: { initialProjects: ProjectCode
               <TableRow>
                 <TableHead className="w-[100px]">Code</TableHead>
                 <TableHead>Name</TableHead>
+                <TableHead className="text-right w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -123,6 +124,14 @@ export function ProjectCodes({ initialProjects }: { initialProjects: ProjectCode
                 <TableRow key={project.id}>
                   <TableCell className="font-medium">{project.code}</TableCell>
                   <TableCell>{project.name}</TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
