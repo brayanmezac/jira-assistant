@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import Image from 'next/image';
 import {
   Card,
   CardContent,
@@ -13,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Pencil, Trash2 } from 'lucide-react';
+import { Loader2, Pencil, Trash2, Download } from 'lucide-react';
 import type { TaskCode } from '@/lib/types';
 import {
   Table,
@@ -46,6 +47,114 @@ import {
   DialogTrigger,
   DialogClose,
 } from '@/components/ui/dialog';
+import { useSettings } from '@/hooks/use-settings';
+import { getJiraIssueTypes, type JiraApiIssueType } from '@/app/actions';
+import { ScrollArea } from '../ui/scroll-area';
+
+function ImportIssueTypesDialog({
+    onTaskAdded,
+    existingTasks,
+  }: {
+    onTaskAdded: (task: TaskCode) => void;
+    existingTasks: TaskCode[];
+  }) {
+    const { settings } = useSettings();
+    const { toast } = useToast();
+    const [isOpen, setIsOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [jiraIssueTypes, setJiraIssueTypes] = useState<JiraApiIssueType[]>([]);
+    const [error, setError] = useState<string | null>(null);
+  
+    const handleFetchIssueTypes = async () => {
+      setIsLoading(true);
+      setError(null);
+      const result = await getJiraIssueTypes(settings);
+      if (result.success && result.issueTypes) {
+        setJiraIssueTypes(result.issueTypes);
+      } else {
+        setError(result.message || 'An unknown error occurred.');
+      }
+      setIsLoading(false);
+    };
+  
+    const handleAddTask = async (issueType: JiraApiIssueType) => {
+      try {
+        const newTask = await addTaskCode({
+             name: issueType.name,
+             type: issueType.name, // Default type to name
+             code: issueType.id,
+             iconUrl: issueType.iconUrl
+            });
+        toast({
+          title: '✅ Success!',
+          description: `Issue Type "${issueType.name}" imported successfully.`,
+        });
+        onTaskAdded(newTask);
+      } catch (e: any) {
+        toast({
+          variant: 'destructive',
+          title: '❌ Error importing issue type',
+          description: e.message || 'An unexpected error occurred.',
+        });
+      }
+    };
+
+    const isImported = (issueTypeName: string) => {
+        return existingTasks.some(task => task.name === issueTypeName);
+    }
+  
+    return (
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogTrigger asChild>
+          <Button variant="outline" onClick={handleFetchIssueTypes}>
+            <Download className="mr-2" />
+            Import from Jira
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Import Issue Types from Jira</DialogTitle>
+            <DialogDescription>
+              Select issue types to import into your configuration. Already added types are disabled.
+            </DialogDescription>
+          </DialogHeader>
+          {isLoading ? (
+            <div className="flex items-center justify-center h-60">
+              <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+          ) : error ? (
+            <div className="text-destructive bg-destructive/10 p-4 rounded-md">{error}</div>
+          ) : (
+            <ScrollArea className="h-96">
+              <Table>
+                  <TableHeader>
+                      <TableRow>
+                          <TableHead>Issue Type</TableHead>
+                          <TableHead className="text-right">Action</TableHead>
+                      </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                      {jiraIssueTypes.map((it) => (
+                          <TableRow key={it.id}>
+                              <TableCell className='font-medium flex items-center gap-2'>
+                                <Image src={it.iconUrl} alt={it.name} width={16} height={16} />
+                                {it.name}
+                              </TableCell>
+                              <TableCell className='text-right'>
+                                  <Button size="sm" onClick={() => handleAddTask(it)} disabled={isImported(it.name)}>
+                                    {isImported(it.name) ? 'Imported' : 'Add'}
+                                </Button>
+                              </TableCell>
+                          </TableRow>
+                      ))}
+                  </TableBody>
+              </Table>
+            </ScrollArea>
+          )}
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
 export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
   const { toast } = useToast();
@@ -53,6 +162,12 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
   const [tasks, setTasks] = useState(initialTasks);
   const [loading, setLoading] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskCode | null>(null);
+
+  const handleTaskAddedFromImport = (newTask: TaskCode) => {
+    if (!tasks.some(p => p.id === newTask.id)) {
+        setTasks(prev => [...prev, newTask].sort((a,b) => a.name.localeCompare(b.name)));
+    }
+  }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -71,7 +186,7 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
       toast({
         variant: 'destructive',
         title: '❌ Error',
-        description: 'All fields are required.',
+        description: 'Name and Type fields are required.',
       });
       setLoading(false);
       return;
@@ -104,6 +219,7 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
     event.preventDefault();
     if (!editingTask) return;
 
+    setLoading(true);
     const formData = new FormData(event.currentTarget);
     const updatedData = {
       code: formData.get('edit-code') as string,
@@ -117,8 +233,9 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
       toast({
         variant: 'destructive',
         title: '❌ Error',
-        description: 'All fields are required.',
+        description: 'Name and Type are required.',
       });
+      setLoading(false);
       return;
     }
 
@@ -145,6 +262,8 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
         title: '❌ Error updating task',
         description: 'An error occurred. Check the developer console for details.',
       });
+    } finally {
+        setLoading(false);
     }
   };
 
@@ -169,10 +288,15 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Task Codes</CardTitle>
-        <CardDescription>
-          Add, edit, and manage the subtask codes that will be created.
-        </CardDescription>
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle>Task Codes</CardTitle>
+            <CardDescription className="mt-1">
+              Add, import, and manage the subtask codes that will be created.
+            </CardDescription>
+          </div>
+          <ImportIssueTypesDialog onTaskAdded={handleTaskAddedFromImport} existingTasks={tasks} />
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
@@ -183,7 +307,6 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
                 id="code"
                 name="code"
                 placeholder="e.g., TDEV_01"
-                required
               />
             </div>
             <div className="space-y-2 col-span-2">
@@ -216,18 +339,21 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
           <Table>
             <TableHeader className="sticky top-0 bg-card">
               <TableRow>
-                <TableHead>Code</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Type</TableHead>
+                <TableHead>Code</TableHead>
                 <TableHead className="text-right w-[120px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {tasks.map((task) => (
                 <TableRow key={task.id}>
-                  <TableCell className="font-medium">{task.code}</TableCell>
-                  <TableCell>{task.name}</TableCell>
+                  <TableCell className="font-medium flex items-center gap-2">
+                    {task.iconUrl && <Image src={task.iconUrl} alt={task.name} width={16} height={16} unoptimized />}
+                    {task.name}
+                    </TableCell>
                   <TableCell>{task.type}</TableCell>
+                  <TableCell className="text-muted-foreground">{task.code}</TableCell>
                   <TableCell className="text-right space-x-1">
                     <Dialog
                       open={editingTask?.id === task.id}
@@ -259,15 +385,6 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
                           className="space-y-4 py-4"
                         >
                           <div className="space-y-2">
-                            <Label htmlFor="edit-code">Code</Label>
-                            <Input
-                              id="edit-code"
-                              name="edit-code"
-                              defaultValue={task.code}
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
                             <Label htmlFor="edit-name">Task Name</Label>
                             <Input
                               id="edit-name"
@@ -276,7 +393,7 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
                               required
                             />
                           </div>
-                           <div className="space-y-2">
+                          <div className="space-y-2">
                             <Label htmlFor="edit-type">Task Type</Label>
                             <Input
                               id="edit-type"
@@ -285,13 +402,24 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
                               required
                             />
                           </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="edit-code">Code</Label>
+                            <Input
+                              id="edit-code"
+                              name="edit-code"
+                              defaultValue={task.code}
+                            />
+                          </div>
                           <DialogFooter>
                             <DialogClose asChild>
                               <Button type="button" variant="secondary">
                                 Cancel
                               </Button>
                             </DialogClose>
-                            <Button type="submit">Save changes</Button>
+                            <Button type="submit" disabled={loading}>
+                               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Save changes
+                            </Button>
                           </DialogFooter>
                         </form>
                       </DialogContent>

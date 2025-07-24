@@ -1,7 +1,7 @@
 'use server';
 
 import { z } from 'zod';
-import { jiraStoryFormSchema, jiraSettingsSchema } from '@/lib/types';
+import { jiraStoryFormSchema, jiraSettingsSchema, jiraIssueTypeSchema } from '@/lib/types';
 import { getTaskCodes, getProjectCodes } from '@/lib/firebase';
 
 export type FormState = {
@@ -341,3 +341,67 @@ export async function getJiraProjects(
   }
 }
 
+export type JiraApiIssueType = z.infer<typeof jiraIssueTypeSchema>;
+
+type FetchJiraIssueTypesResult = {
+    success: boolean;
+    message?: string;
+    issueTypes?: JiraApiIssueType[];
+  };
+  
+  export async function getJiraIssueTypes(
+    settings: z.infer<typeof jiraSettingsSchema>
+  ): Promise<FetchJiraIssueTypesResult> {
+    const { url, email, token } = settings;
+  
+    if (!url || !email || !token) {
+      return {
+        success: false,
+        message: 'Jira settings are not configured. Please add them on the Settings page.',
+      };
+    }
+  
+    const auth = Buffer.from(`${email}:${token}`).toString('base64');
+    const headers = {
+      Authorization: `Basic ${auth}`,
+      'Content-Type': 'application/json',
+    };
+  
+    try {
+      const response = await fetch(`${url}/rest/api/2/issuetype`, {
+        method: 'GET',
+        headers,
+      });
+  
+      if (!response.ok) {
+          if (response.status === 401 || response.status === 403) {
+              return {
+                success: false,
+                message: 'Authentication failed. Check your email and API token in settings.',
+              };
+            }
+        const errorText = await response.text();
+        return {
+          success: false,
+          message: `Jira API error: ${response.statusText}. ${errorText}`,
+        };
+      }
+  
+      const data = await response.json();
+      const issueTypes = z.array(jiraIssueTypeSchema).parse(data);
+  
+      return { success: true, issueTypes };
+    } catch (error: any) {
+      console.error('[JIRA FETCH ISSUE TYPES ERROR]', error);
+      if (error instanceof z.ZodError) {
+          return {
+            success: false,
+            message: `Received an unexpected data format from Jira. Details: ${error.message}`,
+          };
+        }
+      return {
+        success: false,
+        message: `Failed to connect to Jira. Check the URL and your network connection. Error: ${error.message}`,
+      };
+    }
+  }

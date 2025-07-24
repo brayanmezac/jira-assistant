@@ -21,8 +21,15 @@ export type ProjectCode = z.infer<typeof projectCodeSchema> & { id: string };
 
 
 export const taskCodeSchema = z.object({
-  code: z.string().min(1, { message: 'Code is required.' }),
+  code: z.string().optional(),
   name: z.string().min(1, { message: 'Name is required.' }),
   type: z.string().min(1, { message: 'Type is required.' }),
+  iconUrl: z.string().url().optional(),
 });
 export type TaskCode = z.infer<typeof taskCodeSchema> & { id: string };
+
+export const jiraIssueTypeSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    iconUrl: z.string().url(),
+});
