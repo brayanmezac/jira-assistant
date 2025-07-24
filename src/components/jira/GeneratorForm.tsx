@@ -50,7 +50,7 @@ export function GeneratorForm({ formAction, initialState }: GeneratorFormProps) 
     defaultValues: {
       name: '',
       description: '',
-      number: undefined,
+      number: '' as any, // Changed from undefined to empty string
       project: '',
     },
     context: initialState,
@@ -114,7 +114,7 @@ export function GeneratorForm({ formAction, initialState }: GeneratorFormProps) 
                   <FormItem>
                     <FormLabel>Story Number</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="e.g., 123" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10))}/>
+                      <Input type="number" placeholder="e.g., 123" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)}/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
