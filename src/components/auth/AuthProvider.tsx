@@ -4,7 +4,6 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, signOut as firebaseSignOut, type User } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { usePathname, useRouter } from 'next/navigation';
-import { Login } from './Login';
 
 type AuthContextType = {
   user: User | null;
@@ -37,6 +36,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push('/login');
   };
 
+  useEffect(() => {
+    if (!loading) {
+      if (user && pathname === '/login') {
+        router.push('/');
+      } else if (!user && pathname !== '/login') {
+        router.push('/login');
+      }
+    }
+  }, [user, loading, pathname, router]);
+
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -45,26 +55,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
   }
   
-  if (!user && pathname !== '/login') {
-    router.push('/login');
-    return ( // Also render a loading state while redirecting
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-xl">Loading...</div>
-      </div>
+  // Render children only if authentication state is resolved and routes are correct
+  if ((user && pathname !== '/login') || (!user && pathname === '/login')) {
+    return (
+      <AuthContext.Provider value={{ user, loading, signOut }}>
+        {children}
+      </AuthContext.Provider>
     );
   }
 
-  // If the user is logged in but somehow on the login page, or if the page is the login page itself,
-  // let the child components render. The Login page will handle the redirect if the user is logged in.
-  if (pathname === '/login') {
-    return <Login />;
-  }
-
-
+  // Render loading state while redirecting
   return (
-    <AuthContext.Provider value={{ user, loading, signOut }}>
-      {children}
-    </AuthContext.Provider>
+    <div className="flex items-center justify-center h-screen">
+      <div className="text-xl">Loading...</div>
+    </div>
   );
 }
 

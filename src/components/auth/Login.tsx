@@ -8,38 +8,39 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from './AuthProvider';
 
 export function Login() {
-  const [isLoading, setIsLoading] = useState(true);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isProcessingRedirect, setIsProcessingRedirect] = useState(true);
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    const checkRedirect = async () => {
-        try {
-            const result = await getRedirectResult(auth);
-            if (result) {
-              // User successfully signed in. Redirect to home page.
-              router.push('/');
-              return; // Stop further execution in this component
-            }
-        } catch (redirectError: any) {
-            console.error('Error during redirect sign in', redirectError);
-            if (redirectError.code !== 'auth/network-request-failed') {
-               setError(redirectError.message);
-            }
-        } finally {
-            // Only set loading to false if there was no redirect result
-            // If there was a result, we are navigating away anyway.
-            if (!auth.currentUser) {
-              setIsLoading(false);
-            }
-        }
-    };
-    checkRedirect();
-  }, [router]);
+    // If user is already logged in, redirect them.
+    if (!authLoading && user) {
+      router.push('/');
+      return;
+    }
 
+    const processRedirectResult = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        // If result is not null, onAuthStateChanged in AuthProvider will handle the user state
+        // and its own useEffect will handle the redirect.
+      } catch (redirectError: any) {
+        console.error('Error during redirect sign in', redirectError);
+        if (redirectError.code !== 'auth/network-request-failed') {
+          setError(redirectError.message);
+        }
+      } finally {
+        setIsProcessingRedirect(false);
+      }
+    };
+
+    processRedirectResult();
+  }, [user, authLoading, router]);
 
   const handleSignIn = async () => {
     setIsSigningIn(true);
@@ -53,8 +54,9 @@ export function Login() {
       setIsSigningIn(false);
     }
   };
-
-  if (isLoading) {
+  
+  // Show a loading spinner while checking for redirect result or if auth is loading.
+  if (isProcessingRedirect || authLoading) {
     return (
         <div className="flex min-h-screen items-center justify-center bg-background">
             <Loader2 className="h-8 w-8 animate-spin" />
