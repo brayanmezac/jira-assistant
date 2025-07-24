@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore, collection, getDocs, query, orderBy } from 'firebase/firestore';
-import { getAuth, initializeAuth, browserLocalPersistence } from 'firebase/auth';
+import { getAuth } from 'firebase/auth';
 import type { ProjectCode, TaskCode } from './types';
 
 const firebaseConfig = {
@@ -15,30 +15,37 @@ const firebaseConfig = {
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 export const db = getFirestore(app);
-
-// Explicitly initialize auth with the authDomain to solve persistent unauthorized domain issues.
-export const auth = typeof window !== 'undefined' 
-  ? initializeAuth(app, {
-      persistence: browserLocalPersistence,
-      authDomain: firebaseConfig.authDomain,
-    })
-  : getAuth(app);
-
+export const auth = getAuth(app);
 
 export async function getProjectCodes(): Promise<ProjectCode[]> {
     const projectsCol = collection(db, 'projectCodes');
-    const q = query(projectsCol, orderBy('name'));
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProjectCode));
-}
-
-export async function getTaskCodes(): Promise<TaskCode[]> {
+    const q = query(projectsCol, orderBy('name', 'asc'));
+    const projectsSnapshot = await getDocs(q);
+    const projectsList = projectsSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as ProjectCode[];
+    return projectsList;
+  }
+  
+  export async function getTaskCodes(): Promise<TaskCode[]> {
     const tasksCol = collection(db, 'taskCodes');
-    const q = query(tasksCol, orderBy('name'));
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TaskCode));
-}
+    const q = query(tasksCol, orderBy('name', 'asc'));
+    const tasksSnapshot = await getDocs(q);
+    const tasksList = tasksSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as TaskCode[];
+    return tasksList;
+  }
 
-export async function getSubtasks(): Promise<TaskCode[]> {
-    return getTaskCodes();
-}
+  export async function getSubtasks(): Promise<TaskCode[]> {
+    const tasksCol = collection(db, 'taskCodes');
+    const q = query(tasksCol, orderBy('name', 'asc'));
+    const tasksSnapshot = await getDocs(q);
+    const tasksList = tasksSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as TaskCode[];
+    return tasksList;
+  }
