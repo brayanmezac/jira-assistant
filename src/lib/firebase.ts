@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore, collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, query, orderBy, addDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import type { ProjectCode, TaskCode } from './types';
 

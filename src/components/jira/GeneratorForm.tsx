@@ -38,7 +38,11 @@ export function GeneratorForm({ formAction, initialState }: GeneratorFormProps) 
     const [projects, setProjects] = useState<ProjectCode[]>([]);
 
     useEffect(() => {
-        getProjectCodes().then(setProjects);
+        const fetchProjects = async () => {
+            const projectList = await getProjectCodes();
+            setProjects(projectList);
+        };
+        fetchProjects();
     }, []);
 
   const form = useForm<z.infer<typeof jiraStoryFormSchema>>({
