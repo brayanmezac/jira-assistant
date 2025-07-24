@@ -51,6 +51,7 @@ export function GeneratedContent({ epic, story, storyName, projectKey }: Generat
   
   const handleCreateInJira = async () => {
     setIsCreating(true);
+    console.log("Attempting to create Jira tickets with projectKey:", projectKey);
     
     if (!settings.url || !settings.email || !settings.token) {
         toast({
@@ -62,43 +63,51 @@ export function GeneratedContent({ epic, story, storyName, projectKey }: Generat
         return;
     }
     
-    const result = await createJiraTickets({
-        epicSummary: storyName,
-        epicDescription: epic,
-        storySummary: storyName,
-        storyDescription: story,
-        projectKey: projectKey,
-        settings: settings,
-      });
-
-
-    if (result.success && result.data) {
-        const epicUrl = `${settings.url}/browse/${result.data.epicKey}`;
-        toast({
-          title: "✅ Success!",
-          description: (
-            <p>
-              Jira tickets created successfully. {' '}
-              <a 
-                href={epicUrl} 
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline font-medium"
-              >
-                View Epic on Jira
-              </a>
-            </p>
-          ),
+    try {
+        const result = await createJiraTickets({
+            epicSummary: storyName,
+            epicDescription: epic,
+            storySummary: storyName,
+            storyDescription: story,
+            projectKey: projectKey,
+            settings: settings,
         });
-    } else {
+
+        if (result.success && result.data) {
+            const epicUrl = `${settings.url}/browse/${result.data.epicKey}`;
+            toast({
+              title: "✅ Success!",
+              description: (
+                <p>
+                  Jira tickets created successfully. {' '}
+                  <a 
+                    href={epicUrl} 
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline font-medium"
+                  >
+                    View Epic on Jira
+                  </a>
+                </p>
+              ),
+            });
+        } else {
+            toast({
+                variant: 'destructive',
+                title: 'Jira Creation Failed',
+                description: result.message,
+            });
+        }
+    } catch (error) {
+        console.error("Error in handleCreateInJira:", error);
         toast({
             variant: 'destructive',
-            title: 'Jira Creation Failed',
-            description: result.message,
+            title: 'Client-side Error',
+            description: 'An unexpected error occurred. Check the browser console.',
         });
+    } finally {
+        setIsCreating(false);
     }
-
-    setIsCreating(false);
   };
 
   return (
