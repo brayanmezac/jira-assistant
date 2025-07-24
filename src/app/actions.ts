@@ -70,7 +70,7 @@ export async function generateJiraTicketsAction(
       },
     };
   } catch (error) {
-    console.error(error);
+    console.error("Error in generateJiraTicketsAction: ", error);
     return {
       success: false,
       message:

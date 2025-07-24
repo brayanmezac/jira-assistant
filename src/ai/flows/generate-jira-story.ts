@@ -62,8 +62,6 @@ const generateJiraStoryFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await prompt(input);
-    return {
-      jiraStory: output!.jiraStory,
-    };
+    return output!;
   }
 );
