@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useActionState, useEffect, useRef } from 'react';
+import { useActionState, useEffect, useRef, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { addProjectCodeAction, type CodeFormState } from '@/app/actions';
 import {
@@ -46,6 +47,12 @@ export function ProjectCodes({ initialProjects }: { initialProjects: ProjectCode
   const [state, formAction] = useActionState(addProjectCodeAction, initialState);
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
+  const [projects, setProjects] = useState(initialProjects);
+
+  useEffect(() => {
+    setProjects(initialProjects);
+  } , [initialProjects]);
+
 
   useEffect(() => {
     if (state.message) {
@@ -54,6 +61,13 @@ export function ProjectCodes({ initialProjects }: { initialProjects: ProjectCode
           title: '✅ Success!',
           description: state.message,
         });
+        // This is optimistic UI update. A more robust solution might refetch.
+        const newProject: ProjectCode = {
+          id: Date.now().toString(), // temporary id
+          code: formRef.current?.code.value,
+          name: formRef.current?.name.value,
+        }
+        setProjects(p => [newProject, ...p]);
         formRef.current?.reset();
       } else {
         toast({
@@ -103,7 +117,7 @@ export function ProjectCodes({ initialProjects }: { initialProjects: ProjectCode
               </TableRow>
             </TableHeader>
             <TableBody>
-              {initialProjects.map((project) => (
+              {projects.map((project) => (
                 <TableRow key={project.id}>
                   <TableCell className="font-medium">{project.code}</TableCell>
                   <TableCell>{project.name}</TableCell>

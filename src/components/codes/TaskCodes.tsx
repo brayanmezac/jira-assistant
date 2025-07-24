@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useActionState, useEffect, useRef } from 'react';
+import { useActionState, useEffect, useRef, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { addTaskCodeAction, type CodeFormState } from '@/app/actions';
 import {
@@ -45,6 +46,11 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
   const [state, formAction] = useActionState(addTaskCodeAction, initialState);
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
+  const [tasks, setTasks] = useState(initialTasks);
+
+  useEffect(() => {
+    setTasks(initialTasks);
+  }, [initialTasks]);
 
   useEffect(() => {
     if (state.message) {
@@ -53,6 +59,13 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
           title: '✅ Success!',
           description: state.message,
         });
+        const newTask: TaskCode = {
+            id: Date.now().toString(),
+            code: formRef.current?.code.value,
+            name: formRef.current?.name.value,
+            type: formRef.current?.type.value,
+        }
+        setTasks(p => [newTask, ...p]);
         formRef.current?.reset();
       } else {
         toast({
@@ -107,7 +120,7 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
                 </TableRow>
                 </TableHeader>
                 <TableBody>
-                {initialTasks.map((task) => (
+                {tasks.map((task) => (
                     <TableRow key={task.id}>
                     <TableCell className="font-medium">{task.code}</TableCell>
                     <TableCell>{task.name}</TableCell>
