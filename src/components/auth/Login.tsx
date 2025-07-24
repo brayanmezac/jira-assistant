@@ -8,38 +8,47 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from './AuthProvider';
+import { useRouter } from 'next/navigation';
 
 export function Login() {
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isProcessingRedirect, setIsProcessingRedirect] = useState(true);
   const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
+    // This effect should only run once when the component mounts and auth is ready.
+    if (authLoading) {
+      return; // Wait until the AuthProvider has determined the initial auth state.
+    }
+    
+    // If there is already a user, AuthProvider will handle the redirect.
+    if (user) {
+      setIsProcessingRedirect(false);
+      return;
+    }
+
     const processRedirect = async () => {
       try {
         const result = await getRedirectResult(auth);
-        // If 'result' is not null, a user has successfully signed in.
-        // The onAuthStateChanged listener in AuthProvider will handle the user state
-        // and redirect to the main application. We don't need to do anything here.
         if (result) {
-          // User is signed in. AuthProvider will handle redirect.
+          // A user has successfully signed in via redirect.
+          // The onAuthStateChanged listener in AuthProvider will now pick up the new user
+          // and handle the redirect to the main application. We don't need to do it here.
+          // We can simply stop showing the loading state.
         }
       } catch (redirectError: any) {
         console.error('Error getting redirect result:', redirectError);
-        setError(redirectError.message || 'An unknown error occurred during sign-in.');
+        // Make the error visible to the user on the login page.
+        setError(`Login failed: ${redirectError.message} (Code: ${redirectError.code})`);
       } finally {
         setIsProcessingRedirect(false);
       }
     };
     
-    // Process the redirect result when the component mounts and auth is ready.
-    if (!authLoading && !user) {
-        processRedirect();
-    } else if (!authLoading && user) {
-        // User is already logged in, AuthProvider handles redirects.
-        setIsProcessingRedirect(false);
-    }
+    processRedirect();
+
   }, [authLoading, user]);
 
   const handleSignIn = async () => {
@@ -47,9 +56,8 @@ export function Login() {
     setError(null);
     const provider = new GoogleAuthProvider();
     try {
+      // We don't need to await this. The browser will navigate away.
       await signInWithRedirect(auth, provider);
-      // After this, the page will redirect to Google and then back to this page.
-      // The useEffect hook will handle the result.
     } catch (signInError: any) {
       console.error('Error starting sign-in with redirect:', signInError);
       setError(signInError.message);
