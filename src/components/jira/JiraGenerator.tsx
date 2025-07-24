@@ -1,6 +1,6 @@
 'use client';
 
-import { useFormState } from 'react-dom';
+import { useActionState } from 'react';
 import { generateJiraTicketsAction, type FormState } from '@/app/actions';
 import { GeneratorForm } from './GeneratorForm';
 import { GeneratedContent } from './GeneratedContent';
@@ -15,7 +15,7 @@ const initialState: FormState = {
 };
 
 export function JiraGenerator() {
-  const [state, formAction] = useFormState(
+  const [state, formAction] = useActionState(
     generateJiraTicketsAction,
     initialState
   );
