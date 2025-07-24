@@ -86,13 +86,13 @@ export function Login() {
         email,
         password
       );
-      // Create a document for the user in Firestore
+      // Create a document for the user in Firestore to link auth with DB records
       await setDoc(doc(db, 'users', userCredential.user.uid), {
         email: userCredential.user.email,
         createdAt: new Date(),
-        // Add any default settings here
+        // You can add any default user settings here
       });
-      // AuthProvider will handle the redirect
+      // AuthProvider will handle the redirect after successful registration
     } catch (manualError: any) {
       setError(`Registration failed: ${manualError.message}`);
     } finally {
