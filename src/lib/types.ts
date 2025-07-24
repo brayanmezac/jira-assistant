@@ -12,3 +12,17 @@ export const jiraSettingsSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }).optional().or(z.literal('')),
   token: z.string().optional(),
 });
+
+export const projectCodeSchema = z.object({
+  code: z.string().min(1, { message: 'Code is required.'}),
+  name: z.string().min(1, { message: 'Name is required.'}),
+});
+export type ProjectCode = z.infer<typeof projectCodeSchema> & { id: string };
+
+
+export const taskCodeSchema = z.object({
+  code: z.string().min(1, { message: 'Code is required.' }),
+  name: z.string().min(1, { message: 'Name is required.' }),
+  type: z.string().min(1, { message: 'Type is required.' }),
+});
+export type TaskCode = z.infer<typeof taskCodeSchema> & { id: string };

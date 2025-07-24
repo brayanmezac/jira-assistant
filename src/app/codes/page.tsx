@@ -1,25 +1,27 @@
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { ProjectCodes } from '@/components/codes/ProjectCodes';
+import { TaskCodes } from '@/components/codes/TaskCodes';
+import { getProjectCodes, getTaskCodes } from '@/lib/firebase';
 
-export default function CodesPage() {
+export default async function CodesPage() {
+  const [projects, tasks] = await Promise.all([
+    getProjectCodes(),
+    getTaskCodes(),
+  ]);
+
   return (
     <div className="flex flex-col gap-8">
-       <header>
+      <header>
         <h1 className="text-3xl font-headline font-bold tracking-tight">
           Code Configuration
         </h1>
         <p className="text-muted-foreground mt-1">
-          Manage your project and task codes here.
+          Manage your project and task codes for Jira ticket generation.
         </p>
       </header>
-      <Card>
-        <CardHeader>
-          <CardTitle>Coming Soon</CardTitle>
-          <CardDescription>This section is under construction.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p>Here you will be able to configure your project and task codes.</p>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <ProjectCodes initialProjects={projects}/>
+        <TaskCodes initialTasks={tasks} />
+      </div>
     </div>
   );
 }
