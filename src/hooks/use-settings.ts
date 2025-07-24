@@ -33,20 +33,13 @@ export function useSettings() {
       try {
         const dbSettings = await getUserSettings(user!.uid);
         if (isMounted) {
-          if (dbSettings) {
-            // Validate and merge with defaults to ensure all fields are present
-            const validatedSettings = jiraSettingsSchema.parse({
-                ...defaultSettings,
-                ...dbSettings,
-            });
-            setSettingsState(validatedSettings);
-          } else {
-            // No settings in DB, use defaults
-            setSettingsState(defaultSettings);
-          }
+          // Validate and merge with defaults to ensure all fields are present
+          // The `parse` method will apply the .default() values for any missing fields.
+          const validatedSettings = jiraSettingsSchema.parse(dbSettings || {});
+          setSettingsState(validatedSettings);
         }
       } catch (error) {
-        console.error("Failed to load settings from Firestore:", error);
+        console.error("Failed to load or parse settings from Firestore:", error);
         if (isMounted) {
             setSettingsState(defaultSettings); // Fallback to defaults on error
         }
@@ -73,13 +66,14 @@ export function useSettings() {
 
     try {
       // The incoming newSettings object from the form should be complete.
+      // We parse it to ensure all defaults are applied and it's valid.
       const validatedSettings = jiraSettingsSchema.parse(newSettings);
       
-      // Optimistically update the state
-      setSettingsState(validatedSettings);
-
       // Persist to Firestore
       await updateUserSettings(user.uid, validatedSettings);
+
+      // Update the local state only after successful save
+      setSettingsState(validatedSettings);
 
     } catch (error) {
       console.error("Failed to save settings to Firestore", error);
