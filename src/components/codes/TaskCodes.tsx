@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Pencil, Trash2, Download } from 'lucide-react';
+import { Loader2, Pencil, Trash2, Download, Upload, MoreVertical } from 'lucide-react';
 import type { TaskCode } from '@/lib/types';
 import {
   Table,
@@ -50,6 +50,13 @@ import {
 import { useSettings } from '@/hooks/use-settings';
 import { getJiraIssueTypes, type JiraApiIssueType } from '@/app/actions';
 import { ScrollArea } from '../ui/scroll-area';
+import { 
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+ } from '../ui/dropdown-menu';
+import { z } from 'zod';
 
 function ImportIssueTypesDialog({
     onTaskAdded,
@@ -106,10 +113,10 @@ function ImportIssueTypesDialog({
     return (
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger asChild>
-          <Button variant="outline" onClick={handleFetchIssueTypes}>
-            <Download className="mr-2" />
-            Import from Jira
-          </Button>
+            <DropdownMenuItem onSelect={(e) => e.preventDefault()} onClick={handleFetchIssueTypes}>
+                <Download className="mr-2" />
+                Import from Jira
+            </DropdownMenuItem>
         </DialogTrigger>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
@@ -159,6 +166,7 @@ function ImportIssueTypesDialog({
 export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
+  const importFileRef = useRef<HTMLInputElement>(null);
   const [tasks, setTasks] = useState(initialTasks);
   const [loading, setLoading] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskCode | null>(null);
@@ -178,6 +186,7 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
       code: formData.get('code') as string,
       name: formData.get('name') as string,
       type: formData.get('type') as string,
+      iconUrl: formData.get('iconUrl') as string,
     };
 
     const validatedFields = taskCodeSchema.safeParse(newTaskData);
@@ -186,7 +195,7 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
       toast({
         variant: 'destructive',
         title: '❌ Error',
-        description: 'Name and Type fields are required.',
+        description: validatedFields.error.errors.map(e => e.message).join(', '),
       });
       setLoading(false);
       return;
@@ -225,6 +234,7 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
       code: formData.get('edit-code') as string,
       name: formData.get('edit-name') as string,
       type: formData.get('edit-type') as string,
+      iconUrl: formData.get('edit-iconUrl') as string,
     };
 
     const validatedFields = taskCodeSchema.safeParse(updatedData);
@@ -233,7 +243,7 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
       toast({
         variant: 'destructive',
         title: '❌ Error',
-        description: 'Name and Type are required.',
+        description: validatedFields.error.errors.map(e => e.message).join(', '),
       });
       setLoading(false);
       return;
@@ -285,6 +295,58 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
     }
   };
 
+  const handleExport = () => {
+    const dataStr = JSON.stringify(tasks.map(({id, ...rest}) => rest), null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    
+    const exportFileDefaultName = 'task-codes.json';
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+    toast({
+        title: '✅ Exported!',
+        description: 'Task codes have been exported to JSON.',
+    });
+  }
+
+  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const text = e.target?.result;
+        const json = JSON.parse(text as string);
+        const tasksToImport = z.array(taskCodeSchema).parse(json);
+        
+        let importedCount = 0;
+        for (const task of tasksToImport) {
+          if (!tasks.some(t => t.name === task.name)) {
+            const newTask = await addTaskCode(task);
+            handleTaskAddedFromImport(newTask);
+            importedCount++;
+          }
+        }
+        toast({
+            title: `✅ Import Complete`,
+            description: `${importedCount} new task(s) imported successfully.`,
+        });
+
+      } catch (err) {
+        toast({
+            variant: 'destructive',
+            title: '❌ Import Failed',
+            description: 'Invalid JSON format or file content.',
+        });
+      }
+    };
+    reader.readAsText(file);
+    if(importFileRef.current) importFileRef.current.value = "";
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -295,7 +357,25 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
               Add, import, and manage the subtask codes that will be created.
             </CardDescription>
           </div>
-          <ImportIssueTypesDialog onTaskAdded={handleTaskAddedFromImport} existingTasks={tasks} />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon">
+                    <MoreVertical className="h-4 w-4" />
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+                <ImportIssueTypesDialog onTaskAdded={handleTaskAddedFromImport} existingTasks={tasks} />
+                <DropdownMenuItem onClick={() => importFileRef.current?.click()}>
+                    <Upload className="mr-2" />
+                    Import from JSON
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExport}>
+                    <Download className="mr-2" />
+                    Export to JSON
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <input type="file" ref={importFileRef} onChange={handleImport} accept=".json" className="hidden" />
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -319,14 +399,24 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
               />
             </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="type">Task Type</Label>
-            <Input
-              id="type"
-              name="type"
-              placeholder="e.g., Desarrollo"
-              required
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+                <Label htmlFor="type">Task Type</Label>
+                <Input
+                id="type"
+                name="type"
+                placeholder="e.g., Desarrollo"
+                required
+                />
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="iconUrl">Icon URL</Label>
+                <Input
+                id="iconUrl"
+                name="iconUrl"
+                placeholder="https://.../icon.svg"
+                />
+            </div>
           </div>
           <CardFooter className="px-0 pb-0 pt-2">
             <Button type="submit" disabled={loading}>
@@ -408,6 +498,14 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
                               id="edit-code"
                               name="edit-code"
                               defaultValue={task.code}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="edit-iconUrl">Icon URL</Label>
+                            <Input
+                              id="edit-iconUrl"
+                              name="edit-iconUrl"
+                              defaultValue={task.iconUrl}
                             />
                           </div>
                           <DialogFooter>
