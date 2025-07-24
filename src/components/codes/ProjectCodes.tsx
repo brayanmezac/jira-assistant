@@ -44,6 +44,8 @@ export function ProjectCodes({ initialProjects }: { initialProjects: ProjectCode
         name: formData.get('name') as string,
     };
 
+    console.log("Attempting to add project with data:", newProjectData);
+
     const validatedFields = projectCodeSchema.safeParse(newProjectData);
 
     if (!validatedFields.success) {
@@ -64,19 +66,22 @@ export function ProjectCodes({ initialProjects }: { initialProjects: ProjectCode
           title: '✅ Success!',
           description: "Project code added successfully.",
         });
+        console.log("Successfully added document with ID:", docRef.id);
         setProjects(p => [newProject, ...p].sort((a, b) => a.name.localeCompare(b.name)));
         formRef.current?.reset();
 
       } catch (error) {
-        console.error('Error adding project code:', error);
+        console.error('--- DEBUG: Firebase Error while adding project code ---');
+        console.error(error);
+        console.error('--- END DEBUG ---');
         toast({
             variant: 'destructive',
-            title: '❌ Error',
-            description: "An error occurred while adding the project code.",
+            title: '❌ Error adding project',
+            description: "An error occurred. Check the developer console for details.",
         });
+      } finally {
+        setLoading(false);
       }
-
-    setLoading(false);
   };
 
 
