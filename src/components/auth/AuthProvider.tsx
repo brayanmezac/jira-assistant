@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, signOut as firebaseSignOut, type User } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { usePathname, useRouter } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 
 type AuthContextType = {
   user: User | null;
@@ -37,9 +38,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    if (loading) {
-      return;
-    }
+    if (loading) return;
 
     const isAuthPage = pathname === '/login';
 
@@ -53,27 +52,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-xl">Loading...</div>
+      <div className="flex h-screen w-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Initializing...</span>
       </div>
     );
   }
   
-  // Render children only if authentication state is resolved and routes are correct
   const isAuthPage = pathname === '/login';
-  if ((user && !isAuthPage) || (!user && isAuthPage)) {
+  // If user is not logged in and not on login page, don't render children (will be redirected)
+  if (!user && !isAuthPage) {
     return (
-      <AuthContext.Provider value={{ user, loading, signOut }}>
-        {children}
-      </AuthContext.Provider>
+       <div className="flex h-screen w-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Redirecting...</span>
+      </div>
+    );
+  }
+  // If user is logged in and on login page, don't render children (will be redirected)
+  if (user && isAuthPage) {
+     return (
+       <div className="flex h-screen w-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+         <span className="ml-2">Redirecting...</span>
+      </div>
     );
   }
 
-  // Render loading state while redirecting
   return (
-    <div className="flex items-center justify-center h-screen">
-      <div className="text-xl">Loading...</div>
-    </div>
+    <AuthContext.Provider value={{ user, loading, signOut }}>
+      {children}
+    </AuthContext.Provider>
   );
 }
 
