@@ -38,6 +38,10 @@ export default function CodesPage() {
           getProjectCodes(),
           getTaskCodes(),
         ]);
+        
+        projectData.sort((a, b) => a.name.localeCompare(b.name));
+        taskData.sort((a, b) => a.name.localeCompare(b.name));
+
         setProjects(projectData);
         setTasks(taskData);
       } catch (error) {

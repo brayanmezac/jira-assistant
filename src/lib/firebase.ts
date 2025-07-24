@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore, collection, getDocs, query, orderBy, addDoc } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, query } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import type { ProjectCode, TaskCode } from './types';
 
@@ -20,7 +20,7 @@ export const auth = getAuth(app);
 
 export async function getProjectCodes(): Promise<ProjectCode[]> {
     const projectsCol = collection(db, 'projectCodes');
-    const q = query(projectsCol, orderBy('name', 'asc'));
+    const q = query(projectsCol);
     const projectsSnapshot = await getDocs(q);
     const projectsList = projectsSnapshot.docs.map(doc => ({
       id: doc.id,
@@ -31,7 +31,7 @@ export async function getProjectCodes(): Promise<ProjectCode[]> {
   
   export async function getTaskCodes(): Promise<TaskCode[]> {
     const tasksCol = collection(db, 'taskCodes');
-    const q = query(tasksCol, orderBy('name', 'asc'));
+    const q = query(tasksCol);
     const tasksSnapshot = await getDocs(q);
     const tasksList = tasksSnapshot.docs.map(doc => ({
       id: doc.id,
