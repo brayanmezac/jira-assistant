@@ -11,8 +11,8 @@ export const jiraSettingsSchema = z.object({
   url: z.string().url({ message: 'Please enter a valid URL.' }).optional().or(z.literal('')),
   email: z.string().email({ message: 'Please enter a valid email.' }).optional().or(z.literal('')),
   token: z.string().optional(),
-  epicIssueTypeId: z.string().optional(),
-  storyIssueTypeId: z.string().optional(),
+  epicIssueTypeId: z.string().optional().default(''),
+  storyIssueTypeId: z.string().optional().default(''),
 });
 
 export const projectCodeSchema = z.object({
@@ -36,5 +36,3 @@ export const jiraIssueTypeSchema = z.object({
     iconUrl: z.string().url(),
     hierarchyLevel: z.number(),
 });
-
-    
