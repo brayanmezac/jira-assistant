@@ -271,3 +271,73 @@ export async function validateJiraProject(
     };
   }
 }
+
+const jiraApiProjectSchema = z.object({
+  key: z.string(),
+  name: z.string(),
+});
+export type JiraApiProject = z.infer<typeof jiraApiProjectSchema>;
+
+type FetchJiraProjectsResult = {
+  success: boolean;
+  message?: string;
+  projects?: JiraApiProject[];
+};
+
+export async function getJiraProjects(
+  settings: z.infer<typeof jiraSettingsSchema>
+): Promise<FetchJiraProjectsResult> {
+  const { url, email, token } = settings;
+
+  if (!url || !email || !token) {
+    return {
+      success: false,
+      message: 'Jira settings are not configured. Please add them on the Settings page.',
+    };
+  }
+
+  const auth = Buffer.from(`${email}:${token}`).toString('base64');
+  const headers = {
+    Authorization: `Basic ${auth}`,
+    'Content-Type': 'application/json',
+  };
+
+  try {
+    const response = await fetch(`${url}/rest/api/2/project`, {
+      method: 'GET',
+      headers,
+    });
+
+    if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+            return {
+              success: false,
+              message: 'Authentication failed. Check your email and API token in settings.',
+            };
+          }
+      const errorText = await response.text();
+      return {
+        success: false,
+        message: `Jira API error: ${response.statusText}. ${errorText}`,
+      };
+    }
+
+    const data = await response.json();
+    const projects = z.array(jiraApiProjectSchema).parse(data);
+
+    return { success: true, projects };
+  } catch (error: any) {
+    console.error('[JIRA FETCH PROJECTS ERROR]', error);
+    if (error instanceof z.ZodError) {
+        return {
+          success: false,
+          message: `Received an unexpected data format from Jira. Details: ${error.message}`,
+        };
+      }
+    return {
+      success: false,
+      message: `Failed to connect to Jira. Check the URL and your network connection. Error: ${error.message}`,
+    };
+  }
+}
+

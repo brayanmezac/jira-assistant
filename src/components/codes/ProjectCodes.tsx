@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Pencil, Trash2 } from 'lucide-react';
+import { Loader2, Pencil, Trash2, Download } from 'lucide-react';
 import type { ProjectCode } from '@/lib/types';
 import {
   Table,
@@ -47,7 +47,100 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 import { useSettings } from '@/hooks/use-settings';
-import { validateJiraProject } from '@/app/actions';
+import { validateJiraProject, getJiraProjects, type JiraApiProject } from '@/app/actions';
+import { ScrollArea } from '../ui/scroll-area';
+
+function ImportProjectsDialog({
+  onProjectAdded,
+}: {
+  onProjectAdded: (project: ProjectCode) => void;
+}) {
+  const { settings } = useSettings();
+  const { toast } = useToast();
+  const [isOpen, setIsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [jiraProjects, setJiraProjects] = useState<JiraApiProject[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleFetchProjects = async () => {
+    setIsLoading(true);
+    setError(null);
+    const result = await getJiraProjects(settings);
+    if (result.success && result.projects) {
+      setJiraProjects(result.projects);
+    } else {
+      setError(result.message || 'An unknown error occurred.');
+    }
+    setIsLoading(false);
+  };
+
+  const handleAddProject = async (project: JiraApiProject) => {
+    try {
+      const newProject = await addProjectCode({ name: project.name, code: project.key });
+      toast({
+        title: '✅ Success!',
+        description: `Project "${project.name}" imported successfully.`,
+      });
+      onProjectAdded(newProject);
+    } catch (e: any) {
+      toast({
+        variant: 'destructive',
+        title: '❌ Error importing project',
+        description: e.message || 'An unexpected error occurred.',
+      });
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" onClick={handleFetchProjects}>
+          <Download className="mr-2" />
+          Import from Jira
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Import Projects from Jira</DialogTitle>
+          <DialogDescription>
+            Select projects to import into your configuration. Already added projects are disabled.
+          </DialogDescription>
+        </DialogHeader>
+        {isLoading ? (
+          <div className="flex items-center justify-center h-60">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+        ) : error ? (
+          <div className="text-destructive bg-destructive/10 p-4 rounded-md">{error}</div>
+        ) : (
+          <ScrollArea className="h-96">
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Project Name</TableHead>
+                        <TableHead>Code</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {jiraProjects.map((p) => (
+                        <TableRow key={p.key}>
+                            <TableCell className='font-medium'>{p.name}</TableCell>
+                            <TableCell>{p.key}</TableCell>
+                            <TableCell className='text-right'>
+                                <Button size="sm" onClick={() => handleAddProject(p)}>Add</Button>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+          </ScrollArea>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 
 export function ProjectCodes({
   initialProjects,
@@ -62,6 +155,12 @@ export function ProjectCodes({
     null
   );
   const { settings } = useSettings();
+
+  const handleProjectAddedFromImport = (newProject: ProjectCode) => {
+    if (!projects.some(p => p.id === newProject.id)) {
+        setProjects(prev => [...prev, newProject].sort((a,b) => a.name.localeCompare(b.name)));
+    }
+  }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -215,10 +314,15 @@ export function ProjectCodes({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Project Codes</CardTitle>
-        <CardDescription>
-          Add, edit, and manage the Jira project codes. Each code is validated against Jira before being saved.
-        </CardDescription>
+        <div className="flex justify-between items-start">
+            <div>
+                <CardTitle>Project Codes</CardTitle>
+                <CardDescription className="mt-1">
+                Add, import, and manage the Jira project codes. Each code is validated against Jira.
+                </CardDescription>
+            </div>
+            <ImportProjectsDialog onProjectAdded={handleProjectAddedFromImport} />
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
