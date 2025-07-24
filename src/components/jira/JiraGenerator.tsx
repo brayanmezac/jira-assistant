@@ -35,7 +35,12 @@ export function JiraGenerator() {
     <div>
       <GeneratorForm formAction={formAction} initialState={initialState} />
       {state.success && state.data ? (
-        <GeneratedContent epic={state.data.epic} story={state.data.story} />
+        <GeneratedContent 
+          epic={state.data.epic} 
+          story={state.data.story}
+          storyName={state.data.storyName}
+          projectKey={state.data.projectKey} 
+        />
       ) : !state.success && state.message ? (
          <Alert variant="destructive" className="mt-8">
             <AlertTriangle className="h-4 w-4" />

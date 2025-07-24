@@ -7,10 +7,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CheckCircle, Clipboard, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { SubtasksPreview } from './SubtasksPreview';
+import { useSettings } from '@/hooks/use-settings';
+import { createJiraTickets } from '@/app/actions';
 
 type GeneratedContentProps = {
   epic: string;
   story: string;
+  storyName: string;
+  projectKey: string;
 };
 
 function ContentDisplay({ content }: { content: string }) {
@@ -40,31 +44,61 @@ function ContentDisplay({ content }: { content: string }) {
   );
 }
 
-export function GeneratedContent({ epic, story }: GeneratedContentProps) {
+export function GeneratedContent({ epic, story, storyName, projectKey }: GeneratedContentProps) {
   const { toast } = useToast();
   const [isCreating, setIsCreating] = useState(false);
+  const { settings } = useSettings();
   
-  const handleCreateInJira = () => {
+  const handleCreateInJira = async () => {
     setIsCreating(true);
-    // Simulate API call
-    setTimeout(() => {
-      setIsCreating(false);
-      toast({
-        title: "✅ Success!",
-        description: (
-          <p>
-            Jira tickets created successfully. {' '}
-            <a 
-              href="#" 
-              onClick={(e) => e.preventDefault()} 
-              className="underline font-medium"
-            >
-              View on Jira
-            </a>
-          </p>
-        ),
+    
+    if (!settings.url || !settings.email || !settings.token) {
+        toast({
+          variant: 'destructive',
+          title: 'Configuration Missing',
+          description: 'Please configure your Jira settings before creating tickets.',
+        });
+        setIsCreating(false);
+        return;
+    }
+    
+    const result = await createJiraTickets({
+        epicSummary: storyName,
+        epicDescription: epic,
+        storySummary: storyName,
+        storyDescription: story,
+        projectKey: projectKey,
+        settings: settings,
       });
-    }, 2500);
+
+
+    if (result.success && result.data) {
+        const epicUrl = `${settings.url}/browse/${result.data.epicKey}`;
+        toast({
+          title: "✅ Success!",
+          description: (
+            <p>
+              Jira tickets created successfully. {' '}
+              <a 
+                href={epicUrl} 
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline font-medium"
+              >
+                View Epic on Jira
+              </a>
+            </p>
+          ),
+        });
+    } else {
+        toast({
+            variant: 'destructive',
+            title: 'Jira Creation Failed',
+            description: result.message,
+        });
+    }
+
+    setIsCreating(false);
   };
 
   return (
