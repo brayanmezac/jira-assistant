@@ -5,16 +5,22 @@ import { auth } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { AppLogo } from '../AppLogo';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { useState } from 'react';
+import { Loader2 } from 'lucide-react';
 
 export function Login() {
+  const [isLoading, setIsLoading] = useState(false);
+
   const handleSignIn = async () => {
+    setIsLoading(true);
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-      // The AuthProvider will handle the redirect
+      // The AuthProvider will handle the redirect, so we don't need to setIsLoading(false) here on success.
     } catch (error) {
       console.error('Error signing in with Google', error);
-      // Handle error (e.g., show a toast notification)
+      // If there's an error (like the user closing the popup), re-enable the button.
+      setIsLoading(false);
     }
   };
 
@@ -31,7 +37,8 @@ export function Login() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button className="w-full" onClick={handleSignIn}>
+          <Button className="w-full" onClick={handleSignIn} disabled={isLoading}>
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Sign in with Google
           </Button>
         </CardContent>
