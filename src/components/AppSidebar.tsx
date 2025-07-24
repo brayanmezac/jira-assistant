@@ -11,7 +11,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
-import { Home, Settings } from 'lucide-react';
+import { Home, Settings, Tags } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
@@ -37,6 +37,18 @@ export function AppSidebar({ children }: { children: ReactNode }) {
                 <Link href="/">
                   <Home />
                   <span>Generator</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === '/codes'}
+                tooltip={{ children: 'Codes' }}
+              >
+                <Link href="/codes">
+                  <Tags />
+                  <span>Codes</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
