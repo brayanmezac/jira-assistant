@@ -9,21 +9,24 @@ import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 
 export function Login() {
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Start in loading state
+  const [isSigningIn, setIsSigningIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Check for redirect result on component mount
   useEffect(() => {
     const checkRedirect = async () => {
-        setIsLoading(true);
         try {
             const result = await getRedirectResult(auth);
             // If result is not null, the user has successfully signed in.
-            // The AuthProvider will handle the redirect to the main page.
+            // The AuthProvider will handle the redirect to the main page, so we don't need to do anything here.
             // If result is null, it means we are on the initial load of the login page.
         } catch (redirectError: any) {
             console.error('Error during redirect sign in', redirectError);
-            setError(redirectError.message);
+            // Don't show generic network errors to the user if they just arrived at the login page.
+            if (redirectError.code !== 'auth/network-request-failed') {
+               setError(redirectError.message);
+            }
         } finally {
             setIsLoading(false);
         }
@@ -33,18 +36,27 @@ export function Login() {
 
 
   const handleSignIn = async () => {
-    setIsLoading(true);
+    setIsSigningIn(true);
     setError(null);
     const provider = new GoogleAuthProvider();
     try {
-      // We don't need to await this, it will trigger a page redirect.
-      signInWithRedirect(auth, provider);
+      // signInWithRedirect will navigate away, so no need to await or handle success here.
+      // The `useEffect` above will handle the result when the user is redirected back.
+      await signInWithRedirect(auth, provider);
     } catch (signInError: any) {
       console.error('Error starting sign in with redirect', signInError);
       setError(signInError.message);
-      setIsLoading(false);
+      setIsSigningIn(false);
     }
   };
+
+  if (isLoading) {
+    return (
+        <div className="flex min-h-screen items-center justify-center bg-background">
+            <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
@@ -59,8 +71,10 @@ export function Login() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Button className="w-full" onClick={handleSignIn} disabled={isLoading}>
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          <Button className="w-full" onClick={handleSignIn} disabled={isSigningIn}>
+            {isSigningIn ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : null}
             Sign in with Google
           </Button>
           {error && (
