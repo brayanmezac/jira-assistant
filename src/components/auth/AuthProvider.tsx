@@ -46,13 +46,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
   
   if (!user && pathname !== '/login') {
+    router.push('/login');
+    return ( // Also render a loading state while redirecting
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-xl">Loading...</div>
+      </div>
+    );
+  }
+
+  // If the user is logged in but somehow on the login page, or if the page is the login page itself,
+  // let the child components render. The Login page will handle the redirect if the user is logged in.
+  if (pathname === '/login') {
     return <Login />;
   }
 
-  if (user && pathname === '/login') {
-    router.replace('/');
-    return null; // or a loading spinner
-  }
 
   return (
     <AuthContext.Provider value={{ user, loading, signOut }}>

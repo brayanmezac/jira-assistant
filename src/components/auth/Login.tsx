@@ -7,32 +7,38 @@ import { AppLogo } from '../AppLogo';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export function Login() {
-  const [isLoading, setIsLoading] = useState(true); // Start in loading state
+  const [isLoading, setIsLoading] = useState(true);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
-  // Check for redirect result on component mount
   useEffect(() => {
     const checkRedirect = async () => {
         try {
             const result = await getRedirectResult(auth);
-            // If result is not null, the user has successfully signed in.
-            // The AuthProvider will handle the redirect to the main page, so we don't need to do anything here.
-            // If result is null, it means we are on the initial load of the login page.
+            if (result) {
+              // User successfully signed in. Redirect to home page.
+              router.push('/');
+              return; // Stop further execution in this component
+            }
         } catch (redirectError: any) {
             console.error('Error during redirect sign in', redirectError);
-            // Don't show generic network errors to the user if they just arrived at the login page.
             if (redirectError.code !== 'auth/network-request-failed') {
                setError(redirectError.message);
             }
         } finally {
-            setIsLoading(false);
+            // Only set loading to false if there was no redirect result
+            // If there was a result, we are navigating away anyway.
+            if (!auth.currentUser) {
+              setIsLoading(false);
+            }
         }
     };
     checkRedirect();
-  }, []);
+  }, [router]);
 
 
   const handleSignIn = async () => {
@@ -40,8 +46,6 @@ export function Login() {
     setError(null);
     const provider = new GoogleAuthProvider();
     try {
-      // signInWithRedirect will navigate away, so no need to await or handle success here.
-      // The `useEffect` above will handle the result when the user is redirected back.
       await signInWithRedirect(auth, provider);
     } catch (signInError: any) {
       console.error('Error starting sign in with redirect', signInError);
@@ -72,7 +76,7 @@ export function Login() {
         </CardHeader>
         <CardContent className="space-y-4">
           <Button className="w-full" onClick={handleSignIn} disabled={isSigningIn}>
-            {isSigningIn ? (
+            {(isSigningIn) ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : null}
             Sign in with Google
