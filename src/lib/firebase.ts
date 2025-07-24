@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore, collection, getDocs, query, orderBy } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
+import { initializeAuth, getAuth, indexedDBLocalPersistence } from 'firebase/auth';
 import type { ProjectCode, TaskCode } from './types';
 
 const firebaseConfig = {
@@ -15,7 +15,12 @@ const firebaseConfig = {
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 export const db = getFirestore(app);
-export const auth = getAuth(app);
+
+// Explicitly initialize Auth with the correct domain and persistence
+export const auth = initializeAuth(app, {
+    persistence: indexedDBLocalPersistence,
+});
+auth.tenantId = firebaseConfig.authDomain;
 
 
 export async function getProjectCodes(): Promise<ProjectCode[]> {
