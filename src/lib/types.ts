@@ -8,12 +8,13 @@ export const jiraStoryFormSchema = z.object({
 });
 
 export const jiraSettingsSchema = z.object({
-  url: z.string().url({ message: 'Please enter a valid URL.' }).optional().or(z.literal('')),
-  email: z.string().email({ message: 'Please enter a valid email.' }).optional().or(z.literal('')),
+  url: z.string().url({ message: 'Please enter a valid URL.' }).or(z.literal('')).default(''),
+  email: z.string().email({ message: 'Please enter a valid email.' }).or(z.literal('')).default(''),
   token: z.string().optional().default(''),
   epicIssueTypeId: z.string().default(''),
   storyIssueTypeId: z.string().default(''),
 });
+export type JiraSettings = z.infer<typeof jiraSettingsSchema>;
 
 export const projectCodeSchema = z.object({
   code: z.string().min(1, { message: 'Code is required.'}),
@@ -26,7 +27,7 @@ export const taskCodeSchema = z.object({
   code: z.string().min(1, { message: 'Code (ID) is required.' }),
   name: z.string().min(1, { message: 'Name is required.' }),
   type: z.string().min(1, { message: 'Type is required.' }),
-  iconUrl: z.string().url().optional().or(z.literal('')),
+  iconUrl: z.string().url().or(z.literal('')).default(''),
 });
 export type TaskCode = z.infer<typeof taskCodeSchema> & { id: string };
 

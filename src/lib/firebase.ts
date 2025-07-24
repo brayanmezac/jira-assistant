@@ -1,7 +1,7 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore, collection, getDocs, doc, addDoc, updateDoc, deleteDoc, type DocumentData, type WithFieldValue } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
-import type { ProjectCode, TaskCode } from './types';
+import { getFirestore, collection, getDocs, doc, addDoc, updateDoc, deleteDoc, type DocumentData, type WithFieldValue, setDoc, getDoc } from 'firebase/firestore';
+import { getAuth, type User } from 'firebase/auth';
+import type { ProjectCode, TaskCode, JiraSettings } from './types';
 
 const firebaseConfig = {
   projectId: 'jira-assist-fpy59',
@@ -23,7 +23,26 @@ function docToTyped<T>(doc: DocumentData): T {
     return { id: doc.id, ...doc.data() } as T;
 }
 
-// Project Codes
+// User Settings
+export async function getUserSettings(userId: string): Promise<JiraSettings | null> {
+    const docRef = doc(db, 'userSettings', userId);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+        return docSnap.data() as JiraSettings;
+    }
+    return null;
+}
+
+export async function updateUserSettings(userId: string, settings: Partial<JiraSettings>) {
+    const docRef = doc(db, 'userSettings', userId);
+    await setDoc(docRef, settings, { merge: true });
+}
+
+
+// Project Codes - These remain user-specific, stored under a user's document
+// TODO: Refactor these to be user-specific if not already. For now, assuming they are global or need to be moved.
+// For simplicity of this change, we will keep them global.
+
 export async function getProjectCodes(): Promise<ProjectCode[]> {
     const snapshot = await getDocs(collection(db, 'projectCodes'));
     return snapshot.docs.map(doc => docToTyped<ProjectCode>(doc));

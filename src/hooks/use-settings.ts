@@ -2,13 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { z } from 'zod';
-import { jiraSettingsSchema } from '@/lib/types';
+import { jiraSettingsSchema, type JiraSettings } from '@/lib/types';
+import { useAuth } from '@/components/auth/AuthProvider';
+import { getUserSettings, updateUserSettings } from '@/lib/firebase';
 
-type JiraSettings = z.infer<typeof jiraSettingsSchema>;
-
-const SETTINGS_KEY = 'jiraAssist.settings';
-
-// This is the true default, ensuring all keys are present.
 const defaultSettings: JiraSettings = {
     url: '',
     email: '',
@@ -18,45 +15,81 @@ const defaultSettings: JiraSettings = {
 };
 
 export function useSettings() {
+  const { user } = useAuth();
   const [settings, setSettingsState] = useState<JiraSettings>(defaultSettings);
+  const [loading, setLoading] = useState(true);
 
-  // On component mount, try to load settings from localStorage.
+  // Effect to load settings from Firestore when user is available
   useEffect(() => {
-    try {
-      const item = window.localStorage.getItem(SETTINGS_KEY);
-      if (item) {
-        // Parse the stored data and merge it with defaults to ensure
-        // all keys are present, even if the stored data is from an older version.
-        const parsedSettings = jiraSettingsSchema.parse(JSON.parse(item));
-        setSettingsState(parsedSettings);
+    if (!user) {
+        // If there's no user, we can stop loading and use defaults.
+        // Or wait, but for now, let's stop.
+        setLoading(false);
+        return;
+    };
+
+    let isMounted = true;
+    
+    async function loadSettings() {
+      setLoading(true);
+      try {
+        const dbSettings = await getUserSettings(user!.uid);
+        if (isMounted) {
+          if (dbSettings) {
+            // Validate and merge with defaults to ensure all fields are present
+            const validatedSettings = jiraSettingsSchema.parse({
+                ...defaultSettings,
+                ...dbSettings,
+            });
+            setSettingsState(validatedSettings);
+          } else {
+            // No settings in DB, use defaults
+            setSettingsState(defaultSettings);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load settings from Firestore:", error);
+        if (isMounted) {
+            setSettingsState(defaultSettings); // Fallback to defaults on error
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
-    } catch (error) {
-      console.error('Failed to parse settings from localStorage, using defaults.', error);
-      // If parsing fails, it's safer to clear the corrupted data.
-      window.localStorage.removeItem(SETTINGS_KEY);
     }
-  }, []);
 
-  const setSettings = useCallback((newSettings: Partial<JiraSettings>) => {
+    loadSettings();
+
+    return () => {
+        isMounted = false;
+    }
+
+  }, [user]);
+
+  const setSettings = useCallback(async (newSettings: Partial<JiraSettings>) => {
+    if (!user) {
+        console.error("Cannot save settings, no user is authenticated.");
+        return;
+    }
+
     try {
-      // Create a new object by merging the existing state with the new values.
       const mergedSettings = { ...settings, ...newSettings };
-      
-      // Validate the merged object to ensure it conforms to the schema.
       const validatedSettings = jiraSettingsSchema.parse(mergedSettings);
-
-      // Update the React state with the complete, validated object.
+      
+      // Optimistically update the state
       setSettingsState(validatedSettings);
 
-      // Save the complete, validated object to localStorage.
-      window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(validatedSettings));
+      // Persist to Firestore
+      await updateUserSettings(user.uid, validatedSettings);
+
     } catch (error) {
-      console.error('Failed to save settings to localStorage', error);
-      if (error instanceof z.ZodError) {
+      console.error("Failed to save settings to Firestore", error);
+       if (error instanceof z.ZodError) {
         console.error("Zod validation errors:", error.errors);
       }
     }
-  }, [settings]); // Depend on `settings` to ensure `mergedSettings` is up-to-date.
+  }, [user, settings]);
 
-  return { settings, setSettings };
+  return { settings, setSettings, loading };
 }
