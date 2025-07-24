@@ -17,6 +17,7 @@ const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 
+
 export async function getProjectCodes(): Promise<ProjectCode[]> {
     const projectsCol = collection(db, 'projectCodes');
     const q = query(projectsCol, orderBy('name', 'asc'));
