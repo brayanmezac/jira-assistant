@@ -38,9 +38,10 @@ export function SettingsForm() {
 
   const form = useForm<z.infer<typeof jiraSettingsSchema>>({
     resolver: zodResolver(jiraSettingsSchema),
-    values: settings,
+    defaultValues: settings, // Initialize with default or loaded settings
   });
 
+  // This useEffect ensures the form is updated when settings are loaded from localStorage
   useEffect(() => {
     form.reset(settings);
   }, [settings, form]);
@@ -143,7 +144,7 @@ export function SettingsForm() {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Epic Issue Type</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger disabled={loadingIssueTypes}>
                     <SelectValue placeholder="Select an Epic issue type" />
@@ -169,7 +170,7 @@ export function SettingsForm() {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Story Issue Type</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger disabled={loadingIssueTypes}>
                     <SelectValue placeholder="Select a Story issue type" />
@@ -194,5 +195,3 @@ export function SettingsForm() {
     </Form>
   );
 }
-
-    

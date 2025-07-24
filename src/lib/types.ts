@@ -10,9 +10,9 @@ export const jiraStoryFormSchema = z.object({
 export const jiraSettingsSchema = z.object({
   url: z.string().url({ message: 'Please enter a valid URL.' }).optional().or(z.literal('')),
   email: z.string().email({ message: 'Please enter a valid email.' }).optional().or(z.literal('')),
-  token: z.string().optional(),
-  epicIssueTypeId: z.string().optional().default(''),
-  storyIssueTypeId: z.string().optional().default(''),
+  token: z.string().optional().default(''),
+  epicIssueTypeId: z.string().default(''),
+  storyIssueTypeId: z.string().default(''),
 });
 
 export const projectCodeSchema = z.object({

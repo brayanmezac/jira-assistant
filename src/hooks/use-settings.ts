@@ -8,7 +8,8 @@ type JiraSettings = z.infer<typeof jiraSettingsSchema>;
 
 const SETTINGS_KEY = 'jiraAssist.settings';
 
-const initialSettings: JiraSettings = {
+// This is the true default, ensuring all keys are present.
+const defaultSettings: JiraSettings = {
     url: '',
     email: '',
     token: '',
@@ -17,38 +18,37 @@ const initialSettings: JiraSettings = {
 };
 
 export function useSettings() {
-  const [settings, setSettingsState] = useState<JiraSettings>(initialSettings);
+  const [settings, setSettingsState] = useState<JiraSettings>(defaultSettings);
 
+  // On component mount, try to load settings from localStorage.
   useEffect(() => {
     try {
       const item = window.localStorage.getItem(SETTINGS_KEY);
       if (item) {
-        // Use safeParse to avoid throwing errors on invalid data
-        const parsedSettings = jiraSettingsSchema.safeParse(JSON.parse(item));
-        if (parsedSettings.success) {
-            // Merge with initial settings to ensure all keys are present
-            setSettingsState({ ...initialSettings, ...parsedSettings.data });
-        } else {
-            // If parsing fails, maybe clear the invalid data
-            window.localStorage.removeItem(SETTINGS_KEY);
-        }
+        // Parse the stored data and merge it with defaults to ensure
+        // all keys are present, even if the stored data is from an older version.
+        const parsedSettings = jiraSettingsSchema.parse(JSON.parse(item));
+        setSettingsState(parsedSettings);
       }
     } catch (error) {
-      console.error('Failed to parse settings from localStorage', error);
-      // Clear potentially corrupted data
+      console.error('Failed to parse settings from localStorage, using defaults.', error);
+      // If parsing fails, it's safer to clear the corrupted data.
       window.localStorage.removeItem(SETTINGS_KEY);
     }
   }, []);
 
-  const setSettings = useCallback((newSettings: JiraSettings) => {
+  const setSettings = useCallback((newSettings: Partial<JiraSettings>) => {
     try {
-      // Use parse to enforce the schema and get default values
-      const validatedSettings = jiraSettingsSchema.parse(newSettings);
+      // Create a new object by merging the existing state with the new values.
+      const mergedSettings = { ...settings, ...newSettings };
       
-      // Update the state with the validated object
+      // Validate the merged object to ensure it conforms to the schema.
+      const validatedSettings = jiraSettingsSchema.parse(mergedSettings);
+
+      // Update the React state with the complete, validated object.
       setSettingsState(validatedSettings);
 
-      // Save the validated object to localStorage
+      // Save the complete, validated object to localStorage.
       window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(validatedSettings));
     } catch (error) {
       console.error('Failed to save settings to localStorage', error);
@@ -56,7 +56,7 @@ export function useSettings() {
         console.error("Zod validation errors:", error.errors);
       }
     }
-  }, []);
+  }, [settings]); // Depend on `settings` to ensure `mergedSettings` is up-to-date.
 
   return { settings, setSettings };
 }
