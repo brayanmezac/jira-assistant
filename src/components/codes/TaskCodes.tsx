@@ -137,7 +137,7 @@ function ImportIssueTypesDialog({
                       {jiraIssueTypes.map((it) => (
                           <TableRow key={it.id}>
                               <TableCell className='font-medium flex items-center gap-2'>
-                                <Image src={it.iconUrl} alt={it.name} width={16} height={16} />
+                                <Image src={it.iconUrl} alt={it.name} width={16} height={16} unoptimized/>
                                 {it.name}
                               </TableCell>
                               <TableCell className='text-right'>
@@ -452,7 +452,7 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
                           >
                             Yes, delete it
                           </AlertDialogAction>
-                        </AlertDialogFooter>
+                        </footer_class>
                       </AlertDialogContent>
                     </AlertDialog>
                   </TableCell>
