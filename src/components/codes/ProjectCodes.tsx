@@ -24,7 +24,9 @@ import {
     TableHeader,
     TableRow,
   } from "@/components/ui/table"
-import { addProjectCode } from '@/lib/codes-actions';
+import { addDoc, collection } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { projectCodeSchema } from '@/lib/types';
   
 export function ProjectCodes({ initialProjects }: { initialProjects: ProjectCode[] }) {
   const { toast } = useToast();
@@ -37,10 +39,14 @@ export function ProjectCodes({ initialProjects }: { initialProjects: ProjectCode
     setLoading(true);
 
     const formData = new FormData(event.currentTarget);
-    const code = formData.get('code') as string;
-    const name = formData.get('name') as string;
+    const newProjectData = {
+        code: formData.get('code') as string,
+        name: formData.get('name') as string,
+    };
 
-    if(!code || !name) {
+    const validatedFields = projectCodeSchema.safeParse(newProjectData);
+
+    if (!validatedFields.success) {
       toast({
         variant: 'destructive',
         title: '❌ Error',
@@ -50,22 +56,26 @@ export function ProjectCodes({ initialProjects }: { initialProjects: ProjectCode
       return;
     }
 
-    const { success, message, data: newProject } = await addProjectCode({ code, name });
+    try {
+        const docRef = await addDoc(collection(db, 'projectCodes'), validatedFields.data);
+        const newProject = { id: docRef.id, ...validatedFields.data };
+        
+        toast({
+          title: '✅ Success!',
+          description: "Project code added successfully.",
+        });
+        setProjects(p => [newProject, ...p].sort((a, b) => a.name.localeCompare(b.name)));
+        formRef.current?.reset();
 
-    if (success && newProject) {
-      toast({
-        title: '✅ Success!',
-        description: message,
-      });
-      setProjects(p => [newProject, ...p].sort((a, b) => a.name.localeCompare(b.name)));
-      formRef.current?.reset();
-    } else {
-      toast({
-        variant: 'destructive',
-        title: '❌ Error',
-        description: message,
-      });
-    }
+      } catch (error) {
+        console.error('Error adding project code:', error);
+        toast({
+            variant: 'destructive',
+            title: '❌ Error',
+            description: "An error occurred while adding the project code.",
+        });
+      }
+
     setLoading(false);
   };
 

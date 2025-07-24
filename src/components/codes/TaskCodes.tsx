@@ -24,7 +24,9 @@ import {
     TableHeader,
     TableRow,
   } from "@/components/ui/table"
-import { addTaskCode } from '@/lib/codes-actions';
+import { addDoc, collection } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { taskCodeSchema } from '@/lib/types';
 
 export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
   const { toast } = useToast();
@@ -38,11 +40,15 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
     setLoading(true);
 
     const formData = new FormData(event.currentTarget);
-    const code = formData.get('code') as string;
-    const name = formData.get('name') as string;
-    const type = formData.get('type') as string;
+    const newTaskData = {
+        code: formData.get('code') as string,
+        name: formData.get('name') as string,
+        type: formData.get('type') as string,
+    };
     
-    if(!code || !name || !type) {
+    const validatedFields = taskCodeSchema.safeParse(newTaskData);
+
+    if(!validatedFields.success) {
         toast({
           variant: 'destructive',
           title: '❌ Error',
@@ -52,20 +58,22 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
         return;
       }
 
-    const { success, message, data: newTask } = await addTaskCode({ code, name, type });
-    
-    if (success && newTask) {
+    try {
+        const docRef = await addDoc(collection(db, 'taskCodes'), validatedFields.data);
+        const newTask = { id: docRef.id, ...validatedFields.data };
+        
         toast({
           title: '✅ Success!',
-          description: message,
+          description: "Task code added successfully.",
         });
         setTasks(p => [newTask, ...p].sort((a,b) => a.name.localeCompare(b.name)));
         formRef.current?.reset();
-    } else {
+    } catch (error) {
+        console.error('Error adding task code:', error);
         toast({
             variant: 'destructive',
             title: '❌ Error',
-            description: message,
+            description: "An error occurred while adding the task code.",
         });
     }
 
