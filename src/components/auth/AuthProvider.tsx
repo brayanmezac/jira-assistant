@@ -37,12 +37,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    if (!loading) {
-      if (user && pathname === '/login') {
-        router.push('/');
-      } else if (!user && pathname !== '/login') {
-        router.push('/login');
-      }
+    if (loading) {
+      return;
+    }
+
+    const isAuthPage = pathname === '/login';
+
+    if (!user && !isAuthPage) {
+      router.push('/login');
+    } else if (user && isAuthPage) {
+      router.push('/');
     }
   }, [user, loading, pathname, router]);
 
@@ -56,7 +60,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
   
   // Render children only if authentication state is resolved and routes are correct
-  if ((user && pathname !== '/login') || (!user && pathname === '/login')) {
+  const isAuthPage = pathname === '/login';
+  if ((user && !isAuthPage) || (!user && isAuthPage)) {
     return (
       <AuthContext.Provider value={{ user, loading, signOut }}>
         {children}
