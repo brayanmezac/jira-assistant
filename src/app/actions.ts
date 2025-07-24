@@ -69,12 +69,12 @@ export async function generateJiraTicketsAction(
         projectKey: projectKey
       },
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error("[AI-GEN ERROR] Error in generateJiraTicketsAction: ", error);
+    const errorMessage = error.message || 'An unknown error occurred during AI generation.';
     return {
       success: false,
-      message:
-        'An error occurred while generating the Jira tickets. Please try again.',
+      message: `An error occurred while generating the Jira tickets. Please try again. (Details: ${errorMessage})`,
     };
   }
 }
