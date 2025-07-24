@@ -13,6 +13,8 @@ export function useSettings() {
     url: '',
     email: '',
     token: '',
+    epicIssueTypeId: '',
+    storyIssueTypeId: '',
   });
 
   useEffect(() => {
