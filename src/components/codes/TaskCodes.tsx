@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useRef, useState } from 'react';
@@ -45,8 +44,6 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
         name: formData.get('name') as string,
         type: formData.get('type') as string,
     };
-
-    console.log("Attempting to add task with data:", newTaskData);
     
     const validatedFields = taskCodeSchema.safeParse(newTaskData);
 
@@ -68,13 +65,9 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
           title: '✅ Success!',
           description: "Task code added successfully.",
         });
-        console.log("Successfully added document with ID:", docRef.id);
         setTasks(p => [newTask, ...p].sort((a,b) => a.name.localeCompare(b.name)));
         formRef.current?.reset();
     } catch (error) {
-        console.error('--- DEBUG: Firebase Error while adding task code ---');
-        console.error(error);
-        console.error('--- END DEBUG ---');
         toast({
             variant: 'destructive',
             title: '❌ Error adding task',
