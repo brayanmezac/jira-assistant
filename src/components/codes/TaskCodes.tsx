@@ -452,7 +452,7 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
                           >
                             Yes, delete it
                           </AlertDialogAction>
-                        </footer_class>
+                        </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
                   </TableCell>
