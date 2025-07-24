@@ -50,7 +50,16 @@ export async function generateJiraTicketsAction(
 
     const projects = await getProjectCodes();
     const projectInfo = projects.find(p => p.name === project);
-    const projectKey = projectInfo?.code || project.split(' ')[0];
+    
+    if (!projectInfo || !projectInfo.code) {
+        return {
+            success: false,
+            message: `Could not find a valid project code for "${project}". Please check your configuration in the 'Codes' page.`,
+        };
+    }
+
+    const projectKey = projectInfo.code;
+    console.log(`[PROJECT DEBUG] Using project key: "${projectKey}" for project name: "${project}"`);
 
 
     return {
