@@ -8,8 +8,6 @@ import {
   jiraIssueTypeSchema,
 } from '@/lib/types';
 import { getTaskCodes, getProjectCodes } from '@/lib/firebase';
-import { generateJiraEpic } from '@/ai/flows/generate-jira-epic';
-import { generateJiraStory } from '@/ai/flows/generate-jira-story';
 
 export type FormState = {
   success: boolean;
@@ -40,7 +38,7 @@ export async function generateJiraTicketsAction(
     };
   }
 
-  const { name, description, number, project } = validatedFields.data;
+  const { name, description, project } = validatedFields.data;
 
   try {
     const projects = await getProjectCodes();
@@ -54,54 +52,26 @@ export async function generateJiraTicketsAction(
     }
 
     const projectKey = projectInfo.code;
-    console.log(
-      `[PROJECT DEBUG] Using project key: "${projectKey}" for project name: "${project}"`
-    );
-
-    const [epicResult, storyResult] = await Promise.all([
-        generateJiraEpic({
-          featureDescription: description,
-          projectName: project,
-          storyName: name,
-          numero: number,
-        }),
-        generateJiraStory({
-          storyDescription: description,
-          projectName: project,
-          storyName: name,
-          numero: number,
-        }),
-      ]);
-
-    if (!epicResult.epicDescription || !storyResult.jiraStory) {
-        return {
-            success: false,
-            message: 'AI generation failed. The model did not return the expected content.',
-        };
-    }
+    
+    // Use the user-provided description directly for both epic and story
+    const epicDescription = description;
+    const storyDescription = description;
 
     return {
       success: true,
-      message: 'Successfully generated content.',
+      message: 'Content ready for Jira.',
       data: {
-        epic: epicResult.epicDescription,
-        story: storyResult.jiraStory,
+        epic: epicDescription,
+        story: storyDescription,
         storyName: name,
         projectKey: projectKey,
       },
     };
   } catch (error: any) {
     console.error('Error in generateJiraTicketsAction:', error);
-    // Check if the error is related to API key or permissions
-    if (error.message && (error.message.includes('API key not valid') || error.message.includes('permission'))) {
-         return {
-            success: false,
-            message: "AI generation failed due to an authentication or permission error. Please check your AI service credentials (e.g., Gemini API Key).",
-         }
-    }
     return {
       success: false,
-      message: `An error occurred while generating the Jira tickets. Please try again. (Details: ${error.message})`,
+      message: `An error occurred while preparing the Jira tickets. Please try again. (Details: ${error.message})`,
     };
   }
 }
