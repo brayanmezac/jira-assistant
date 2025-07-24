@@ -21,10 +21,10 @@ export type ProjectCode = z.infer<typeof projectCodeSchema> & { id: string };
 
 
 export const taskCodeSchema = z.object({
-  code: z.string().optional(),
+  code: z.string().min(1, { message: 'Code (ID) is required.' }),
   name: z.string().min(1, { message: 'Name is required.' }),
   type: z.string().min(1, { message: 'Type is required.' }),
-  iconUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
+  iconUrl: z.string().url().optional().or(z.literal('')),
 });
 export type TaskCode = z.infer<typeof taskCodeSchema> & { id: string };
 

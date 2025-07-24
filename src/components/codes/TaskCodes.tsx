@@ -170,11 +170,29 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
   const [tasks, setTasks] = useState(initialTasks);
   const [loading, setLoading] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskCode | null>(null);
+  const { settings } = useSettings();
 
   const handleTaskAddedFromImport = (newTask: TaskCode) => {
     if (!tasks.some(p => p.id === newTask.id)) {
         setTasks(prev => [...prev, newTask].sort((a,b) => a.name.localeCompare(b.name)));
     }
+  }
+
+  const findIconUrlForCode = async (code: string): Promise<string | undefined> => {
+    if (!settings.url || !settings.email || !settings.token) {
+        toast({
+            variant: 'destructive',
+            title: 'Jira Settings Missing',
+            description: 'Cannot fetch icon without Jira settings configured.'
+        });
+        return undefined;
+    }
+    const result = await getJiraIssueTypes(settings);
+    if (result.success && result.issueTypes) {
+        const foundType = result.issueTypes.find(it => it.id === code);
+        return foundType?.iconUrl;
+    }
+    return undefined;
   }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -186,10 +204,9 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
       code: formData.get('code') as string,
       name: formData.get('name') as string,
       type: formData.get('type') as string,
-      iconUrl: formData.get('iconUrl') as string,
     };
 
-    const validatedFields = taskCodeSchema.safeParse(newTaskData);
+    const validatedFields = taskCodeSchema.omit({iconUrl: true}).safeParse(newTaskData);
 
     if (!validatedFields.success) {
       toast({
@@ -202,7 +219,13 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
     }
 
     try {
-      const newTask = await addTaskCode(validatedFields.data);
+      const iconUrl = await findIconUrlForCode(validatedFields.data.code);
+      const dataToSave = {
+        ...validatedFields.data,
+        iconUrl: iconUrl || '',
+      };
+
+      const newTask = await addTaskCode(dataToSave);
 
       toast({
         title: '✅ Success!',
@@ -234,10 +257,9 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
       code: formData.get('edit-code') as string,
       name: formData.get('edit-name') as string,
       type: formData.get('edit-type') as string,
-      iconUrl: formData.get('edit-iconUrl') as string,
     };
 
-    const validatedFields = taskCodeSchema.safeParse(updatedData);
+    const validatedFields = taskCodeSchema.omit({ iconUrl: true }).safeParse(updatedData);
 
     if (!validatedFields.success) {
       toast({
@@ -250,7 +272,13 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
     }
 
     try {
-      await updateTaskCode(editingTask.id, validatedFields.data);
+      const iconUrl = await findIconUrlForCode(validatedFields.data.code);
+      const dataToUpdate = {
+        ...validatedFields.data,
+        iconUrl: iconUrl || '',
+      }
+
+      await updateTaskCode(editingTask.id, dataToUpdate);
       toast({
         title: '✅ Success!',
         description: 'Task code updated successfully.',
@@ -259,7 +287,7 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
         p
           .map((task) =>
             task.id === editingTask.id
-              ? { ...task, ...validatedFields.data }
+              ? { ...task, ...dataToUpdate }
               : task
           )
           .sort((a, b) => a.name.localeCompare(b.name))
@@ -380,43 +408,34 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
       </CardHeader>
       <CardContent className="space-y-6">
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2 col-span-1">
-              <Label htmlFor="code">Code</Label>
+              <Label htmlFor="code">Code (Issue Type ID)</Label>
               <Input
                 id="code"
                 name="code"
-                placeholder="e.g., TDEV_01"
+                placeholder="e.g., 10001"
+                required
               />
             </div>
-            <div className="space-y-2 col-span-2">
-              <Label htmlFor="name">Task Name</Label>
+            <div className="space-y-2 col-span-1">
+              <Label htmlFor="type">Task Type</Label>
               <Input
-                id="name"
-                name="name"
-                placeholder="e.g., Tarea de Desarrollo"
+                id="type"
+                name="type"
+                placeholder="e.g., Sub-task"
                 required
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-                <Label htmlFor="type">Task Type</Label>
-                <Input
-                id="type"
-                name="type"
-                placeholder="e.g., Desarrollo"
-                required
-                />
-            </div>
-            <div className="space-y-2">
-                <Label htmlFor="iconUrl">Icon URL</Label>
-                <Input
-                id="iconUrl"
-                name="iconUrl"
-                placeholder="https://.../icon.svg"
-                />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="name">Task Name</Label>
+            <Input
+              id="name"
+              name="name"
+              placeholder="e.g., Analysis Sub-task"
+              required
+            />
           </div>
           <CardFooter className="px-0 pb-0 pt-2">
             <Button type="submit" disabled={loading}>
@@ -431,7 +450,7 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Type</TableHead>
-                <TableHead>Code</TableHead>
+                <TableHead>Code (ID)</TableHead>
                 <TableHead className="text-right w-[120px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -493,19 +512,12 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="edit-code">Code</Label>
+                            <Label htmlFor="edit-code">Code (Issue Type ID)</Label>
                             <Input
                               id="edit-code"
                               name="edit-code"
                               defaultValue={task.code}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="edit-iconUrl">Icon URL</Label>
-                            <Input
-                              id="edit-iconUrl"
-                              name="edit-iconUrl"
-                              defaultValue={task.iconUrl}
+                              required
                             />
                           </div>
                           <DialogFooter>
