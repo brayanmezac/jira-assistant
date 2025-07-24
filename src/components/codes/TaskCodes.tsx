@@ -59,13 +59,14 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
           title: '✅ Success!',
           description: state.message,
         });
+        const formData = new FormData(formRef.current!);
         const newTask: TaskCode = {
             id: Date.now().toString(),
-            code: formRef.current?.code.value,
-            name: formRef.current?.name.value,
-            type: formRef.current?.type.value,
+            code: formData.get('code') as string,
+            name: formData.get('name') as string,
+            type: formData.get('type') as string,
         }
-        setTasks(p => [newTask, ...p]);
+        setTasks(p => [newTask, ...p].sort((a,b) => a.name.localeCompare(b.name)));
         formRef.current?.reset();
       } else {
         toast({

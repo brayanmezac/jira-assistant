@@ -61,13 +61,13 @@ export function ProjectCodes({ initialProjects }: { initialProjects: ProjectCode
           title: '✅ Success!',
           description: state.message,
         });
-        // This is optimistic UI update. A more robust solution might refetch.
+        const formData = new FormData(formRef.current!);
         const newProject: ProjectCode = {
           id: Date.now().toString(), // temporary id
-          code: formRef.current?.code.value,
-          name: formRef.current?.name.value,
+          code: formData.get('code') as string,
+          name: formData.get('name') as string,
         }
-        setProjects(p => [newProject, ...p]);
+        setProjects(p => [newProject, ...p].sort((a, b) => a.name.localeCompare(b.name)));
         formRef.current?.reset();
       } else {
         toast({
