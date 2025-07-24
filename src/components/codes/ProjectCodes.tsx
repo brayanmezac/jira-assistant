@@ -16,22 +16,49 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Pencil, Trash2 } from 'lucide-react';
 import type { ProjectCode } from '@/lib/types';
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-  } from "@/components/ui/table"
-import { addDoc, collection } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { addProjectCode, deleteProjectCode, updateProjectCode } from '@/lib/firebase';
 import { projectCodeSchema } from '@/lib/types';
-  
-export function ProjectCodes({ initialProjects }: { initialProjects: ProjectCode[] }) {
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from '@/components/ui/dialog';
+
+export function ProjectCodes({
+  initialProjects,
+}: {
+  initialProjects: ProjectCode[];
+}) {
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
   const [projects, setProjects] = useState(initialProjects);
   const [loading, setLoading] = useState(false);
+  const [editingProject, setEditingProject] = useState<ProjectCode | null>(
+    null
+  );
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -39,8 +66,8 @@ export function ProjectCodes({ initialProjects }: { initialProjects: ProjectCode
 
     const formData = new FormData(event.currentTarget);
     const newProjectData = {
-        code: formData.get('code') as string,
-        name: formData.get('name') as string,
+      code: formData.get('code') as string,
+      name: formData.get('name') as string,
     };
 
     const validatedFields = projectCodeSchema.safeParse(newProjectData);
@@ -56,34 +83,99 @@ export function ProjectCodes({ initialProjects }: { initialProjects: ProjectCode
     }
 
     try {
-        const docRef = await addDoc(collection(db, 'projectCodes'), validatedFields.data);
-        const newProject = { id: docRef.id, ...validatedFields.data };
-        
-        toast({
-          title: '✅ Success!',
-          description: "Project code added successfully.",
-        });
-        setProjects(p => [newProject, ...p].sort((a, b) => a.name.localeCompare(b.name)));
-        formRef.current?.reset();
+      const newProject = await addProjectCode(validatedFields.data);
 
-      } catch (error) {
-        toast({
-            variant: 'destructive',
-            title: '❌ Error adding project',
-            description: "An error occurred. Check the developer console for details.",
-        });
-      } finally {
-        setLoading(false);
-      }
+      toast({
+        title: '✅ Success!',
+        description: 'Project code added successfully.',
+      });
+      setProjects((p) =>
+        [newProject, ...p].sort((a, b) => a.name.localeCompare(b.name))
+      );
+      formRef.current?.reset();
+    } catch (error) {
+      console.error(error);
+      toast({
+        variant: 'destructive',
+        title: '❌ Error adding project',
+        description: 'An error occurred. Check the developer console for details.',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
+  const handleEditSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!editingProject) return;
+
+    const formData = new FormData(event.currentTarget);
+    const updatedData = {
+      code: formData.get('edit-code') as string,
+      name: formData.get('edit-name') as string,
+    };
+
+    const validatedFields = projectCodeSchema.safeParse(updatedData);
+
+    if (!validatedFields.success) {
+      toast({
+        variant: 'destructive',
+        title: '❌ Error',
+        description: 'Code and Name are required.',
+      });
+      return;
+    }
+
+    try {
+      await updateProjectCode(editingProject.id, validatedFields.data);
+      toast({
+        title: '✅ Success!',
+        description: 'Project code updated successfully.',
+      });
+      setProjects((p) =>
+        p
+          .map((proj) =>
+            proj.id === editingProject.id
+              ? { ...proj, ...validatedFields.data }
+              : proj
+          )
+          .sort((a, b) => a.name.localeCompare(b.name))
+      );
+      setEditingProject(null); // This will close the dialog via the `open` prop
+    } catch (error) {
+      console.error(error);
+      toast({
+        variant: 'destructive',
+        title: '❌ Error updating project',
+        description: 'An error occurred. Check the developer console for details.',
+      });
+    }
+  };
+
+  const handleDelete = async (projectId: string) => {
+    try {
+      await deleteProjectCode(projectId);
+      toast({
+        title: '✅ Success!',
+        description: 'Project code deleted successfully.',
+      });
+      setProjects((p) => p.filter((proj) => proj.id !== projectId));
+    } catch (error) {
+      console.error(error);
+      toast({
+        variant: 'destructive',
+        title: '❌ Error deleting project',
+        description: 'An error occurred. Check the developer console for details.',
+      });
+    }
+  };
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Project Codes</CardTitle>
         <CardDescription>
-          Add and manage the Jira project codes and names.
+          Add, edit, and manage the Jira project codes and names.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -111,12 +203,12 @@ export function ProjectCodes({ initialProjects }: { initialProjects: ProjectCode
           </CardFooter>
         </form>
         <div className="max-h-60 overflow-auto">
-        <Table>
+          <Table>
             <TableHeader className="sticky top-0 bg-card">
               <TableRow>
                 <TableHead className="w-[100px]">Code</TableHead>
                 <TableHead>Name</TableHead>
-                <TableHead className="text-right w-[100px]">Actions</TableHead>
+                <TableHead className="text-right w-[120px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -124,13 +216,97 @@ export function ProjectCodes({ initialProjects }: { initialProjects: ProjectCode
                 <TableRow key={project.id}>
                   <TableCell className="font-medium">{project.code}</TableCell>
                   <TableCell>{project.name}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <Trash2 className="h-4 w-4" />
-                    </Button>
+                  <TableCell className="text-right space-x-1">
+                    <Dialog
+                      open={editingProject?.id === project.id}
+                      onOpenChange={(isOpen) => {
+                        if (!isOpen) setEditingProject(null);
+                        else setEditingProject(project);
+                      }}
+                    >
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => setEditingProject(project)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Edit Project Code</DialogTitle>
+                          <DialogDescription>
+                            Make changes to your project here. Click save when
+                            you're done.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <form
+                          onSubmit={handleEditSubmit}
+                          className="space-y-4 py-4"
+                        >
+                          <div className="space-y-2">
+                            <Label htmlFor="edit-code">Code</Label>
+                            <Input
+                              id="edit-code"
+                              name="edit-code"
+                              defaultValue={project.code}
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="edit-name">Project Name</Label>
+                            <Input
+                              id="edit-name"
+                              name="edit-name"
+                              defaultValue={project.name}
+                              required
+                            />
+                          </div>
+                          <DialogFooter>
+                            <DialogClose asChild>
+                              <Button type="button" variant="secondary">
+                                Cancel
+                              </Button>
+                            </DialogClose>
+                            <Button type="submit">Save changes</Button>
+                          </DialogFooter>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>
+                            Are you absolutely sure?
+                          </AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action cannot be undone. This will permanently
+                            delete the project code "{project.name}".
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDelete(project.id)}
+                            className="bg-destructive hover:bg-destructive/90"
+                          >
+                            Yes, delete it
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </TableCell>
                 </TableRow>
               ))}
