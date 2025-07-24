@@ -1,13 +1,10 @@
-
 'use server';
 
 import { z } from 'zod';
 import { generateJiraEpic } from '@/ai/flows/generate-jira-epic';
 import { generateJiraStory } from '@/ai/flows/generate-jira-story';
-import { jiraStoryFormSchema, jiraSettingsSchema, projectCodeSchema, taskCodeSchema } from '@/lib/types';
+import { jiraStoryFormSchema, jiraSettingsSchema } from '@/lib/types';
 import { getTaskCodes, getProjectCodes } from '@/lib/firebase';
-import { addDoc, collection, getDocs, orderBy, query } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { revalidatePath } from 'next/cache';
 
 export type FormState = {
@@ -194,58 +191,5 @@ export async function createJiraTickets(input: CreateJiraTicketsInput): Promise<
     } catch (error) {
         console.error('Error creating Jira tickets:', error);
         return { success: false, message: 'An unexpected error occurred.' };
-    }
-}
-
-// Actions for Codes page
-export type CodeFormState = {
-    success: boolean;
-    message: string;
-};
-
-export async function addProjectCodeAction(
-    _prevState: CodeFormState,
-    formData: FormData
-): Promise<CodeFormState> {
-    const validatedFields = projectCodeSchema.safeParse({
-        code: formData.get('code'),
-        name: formData.get('name'),
-    });
-
-    if (!validatedFields.success) {
-        return { success: false, message: 'Invalid form data.' };
-    }
-
-    try {
-        await addDoc(collection(db, 'projectCodes'), validatedFields.data);
-        revalidatePath('/codes');
-        return { success: true, message: 'Project code added successfully.' };
-    } catch (error) {
-        console.error('Error adding project code:', error);
-        return { success: false, message: 'An error occurred while adding the project code.' };
-    }
-}
-
-export async function addTaskCodeAction(
-    _prevState: CodeFormState,
-    formData: FormData
-): Promise<CodeFormState> {
-    const validatedFields = taskCodeSchema.safeParse({
-        code: formData.get('code'),
-        name: formData.get('name'),
-        type: formData.get('type'),
-    });
-
-    if (!validatedFields.success) {
-        return { success: false, message: 'Invalid form data.' };
-    }
-    
-    try {
-        await addDoc(collection(db, 'taskCodes'), validatedFields.data);
-        revalidatePath('/codes');
-        return { success: true, message: 'Task code added successfully.' };
-    } catch (error) {
-        console.error('Error adding task code:', error);
-        return { success: false, message: 'An error occurred while adding the task code.' };
     }
 }

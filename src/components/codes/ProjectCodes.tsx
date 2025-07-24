@@ -1,9 +1,7 @@
 
 'use client';
 
-import { useActionState, useEffect, useRef, useState } from 'react';
-import { useFormStatus } from 'react-dom';
-import { addProjectCodeAction, type CodeFormState } from '@/app/actions';
+import { useRef, useState } from 'react';
 import {
   Card,
   CardContent,
@@ -26,58 +24,51 @@ import {
     TableHeader,
     TableRow,
   } from "@/components/ui/table"
+import { addProjectCode } from '@/lib/codes-actions';
   
-
-const initialState: CodeFormState = {
-  success: false,
-  message: '',
-};
-
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" disabled={pending}>
-      {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-      Add Project
-    </Button>
-  );
-}
-
 export function ProjectCodes({ initialProjects }: { initialProjects: ProjectCode[] }) {
-  const [state, formAction] = useActionState(addProjectCodeAction, initialState);
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
   const [projects, setProjects] = useState(initialProjects);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    setProjects(initialProjects);
-  } , [initialProjects]);
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setLoading(true);
 
+    const formData = new FormData(event.currentTarget);
+    const code = formData.get('code') as string;
+    const name = formData.get('name') as string;
 
-  useEffect(() => {
-    if (state.message) {
-      if (state.success) {
-        toast({
-          title: '✅ Success!',
-          description: state.message,
-        });
-        const formData = new FormData(formRef.current!);
-        const newProject: ProjectCode = {
-          id: Date.now().toString(), // temporary id
-          code: formData.get('code') as string,
-          name: formData.get('name') as string,
-        }
-        setProjects(p => [newProject, ...p].sort((a, b) => a.name.localeCompare(b.name)));
-        formRef.current?.reset();
-      } else {
-        toast({
-          variant: 'destructive',
-          title: '❌ Error',
-          description: state.message,
-        });
-      }
+    if(!code || !name) {
+      toast({
+        variant: 'destructive',
+        title: '❌ Error',
+        description: 'Code and Name are required.',
+      });
+      setLoading(false);
+      return;
     }
-  }, [state, toast]);
+
+    const { success, message, data: newProject } = await addProjectCode({ code, name });
+
+    if (success && newProject) {
+      toast({
+        title: '✅ Success!',
+        description: message,
+      });
+      setProjects(p => [newProject, ...p].sort((a, b) => a.name.localeCompare(b.name)));
+      formRef.current?.reset();
+    } else {
+      toast({
+        variant: 'destructive',
+        title: '❌ Error',
+        description: message,
+      });
+    }
+    setLoading(false);
+  };
+
 
   return (
     <Card>
@@ -88,7 +79,7 @@ export function ProjectCodes({ initialProjects }: { initialProjects: ProjectCode
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <form ref={formRef} action={formAction} className="space-y-4">
+        <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2 col-span-1">
               <Label htmlFor="code">Code</Label>
@@ -105,7 +96,10 @@ export function ProjectCodes({ initialProjects }: { initialProjects: ProjectCode
             </div>
           </div>
           <CardFooter className="px-0 pb-0 pt-2">
-            <SubmitButton />
+            <Button type="submit" disabled={loading}>
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Add Project
+            </Button>
           </CardFooter>
         </form>
         <div className="max-h-60 overflow-auto">

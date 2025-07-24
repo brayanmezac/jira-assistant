@@ -1,9 +1,7 @@
 
 'use client';
 
-import { useActionState, useEffect, useRef, useState } from 'react';
-import { useFormStatus } from 'react-dom';
-import { addTaskCodeAction, type CodeFormState } from '@/app/actions';
+import { useRef, useState } from 'react';
 import {
   Card,
   CardContent,
@@ -26,57 +24,53 @@ import {
     TableHeader,
     TableRow,
   } from "@/components/ui/table"
-
-const initialState: CodeFormState = {
-  success: false,
-  message: '',
-};
-
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" disabled={pending}>
-      {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-      Add Task
-    </Button>
-  );
-}
+import { addTaskCode } from '@/lib/codes-actions';
 
 export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
-  const [state, formAction] = useActionState(addTaskCodeAction, initialState);
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
   const [tasks, setTasks] = useState(initialTasks);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    setTasks(initialTasks);
-  }, [initialTasks]);
 
-  useEffect(() => {
-    if (state.message) {
-      if (state.success) {
-        toast({
-          title: '✅ Success!',
-          description: state.message,
-        });
-        const formData = new FormData(formRef.current!);
-        const newTask: TaskCode = {
-            id: Date.now().toString(),
-            code: formData.get('code') as string,
-            name: formData.get('name') as string,
-            type: formData.get('type') as string,
-        }
-        setTasks(p => [newTask, ...p].sort((a,b) => a.name.localeCompare(b.name)));
-        formRef.current?.reset();
-      } else {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setLoading(true);
+
+    const formData = new FormData(event.currentTarget);
+    const code = formData.get('code') as string;
+    const name = formData.get('name') as string;
+    const type = formData.get('type') as string;
+    
+    if(!code || !name || !type) {
         toast({
           variant: 'destructive',
           title: '❌ Error',
-          description: state.message,
+          description: 'All fields are required.',
         });
+        setLoading(false);
+        return;
       }
+
+    const { success, message, data: newTask } = await addTaskCode({ code, name, type });
+    
+    if (success && newTask) {
+        toast({
+          title: '✅ Success!',
+          description: message,
+        });
+        setTasks(p => [newTask, ...p].sort((a,b) => a.name.localeCompare(b.name)));
+        formRef.current?.reset();
+    } else {
+        toast({
+            variant: 'destructive',
+            title: '❌ Error',
+            description: message,
+        });
     }
-  }, [state, toast]);
+
+    setLoading(false);
+  };
 
   return (
     <Card>
@@ -87,7 +81,7 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <form ref={formRef} action={formAction} className="space-y-4">
+        <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2 col-span-1">
               <Label htmlFor="code">Code</Label>
@@ -108,7 +102,10 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
             <Input id="type" name="type" placeholder="e.g., Desarrollo" required />
           </div>
           <CardFooter className="px-0 pb-0 pt-2">
-            <SubmitButton />
+            <Button type="submit" disabled={loading}>
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Add Task
+            </Button>
           </CardFooter>
         </form>
         <div className="max-h-60 overflow-auto">
