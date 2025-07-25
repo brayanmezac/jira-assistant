@@ -50,6 +50,16 @@ export async function getProjectCodes(): Promise<ProjectCode[]> {
     return snapshot.docs.map(doc => docToTyped<ProjectCode>(doc));
 }
 
+export async function getProjectCode(id: string): Promise<ProjectCode | null> {
+    const docRef = doc(db, 'projectCodes', id);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+        return docToTyped<ProjectCode>(docSnap);
+    }
+    return null;
+}
+
+
 export async function addProjectCode(projectData: WithFieldValue<Omit<ProjectCode, 'id'>>): Promise<ProjectCode> {
     const docRef = await addDoc(collection(db, 'projectCodes'), projectData);
     return { id: docRef.id, ...projectData } as ProjectCode;

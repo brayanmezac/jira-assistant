@@ -8,7 +8,7 @@ import {
   jiraIssueTypeSchema,
   type TaskCode,
 } from '@/lib/types';
-import { getTaskCodes, getProjectCodes } from '@/lib/firebase';
+import { getTaskCodes, getProjectCodes, getProjectCode } from '@/lib/firebase';
 
 export type FormState = {
   success: boolean;
@@ -46,12 +46,18 @@ export async function generateJiraTicketsAction(
     const projects = await getProjectCodes();
     const projectInfo = projects.find((p) => p.name === project);
 
-    if (!projectInfo || !projectInfo.code) {
+    if (!projectInfo || !projectInfo.id) {
       return {
         success: false,
-        message: `Could not find a valid project code for "${project}". Please check your configuration in the 'Codes' page.`,
+        message: `Could not find a valid project for "${project}".`,
       };
     }
+    
+    // Fetch full project details to get the template
+    const fullProject = await getProjectCode(projectInfo.id);
+    const template = fullProject?.template || '{{{storyDescription}}}'; // Default to just the description if no template
+    
+    const finalDescription = template.replace('{{{storyDescription}}}', description);
 
     const projectKey = projectInfo.code;
     const subtasks = await getTaskCodes();
@@ -60,7 +66,7 @@ export async function generateJiraTicketsAction(
       success: true,
       message: 'Content ready for Jira.',
       data: {
-        storyDescription: description, // Use the user-provided description directly
+        storyDescription: finalDescription, // Use the template-injected description
         storyName: name,
         projectKey: projectKey,
         storyNumber: number,
@@ -134,7 +140,7 @@ export async function createJiraTickets(
       fields: {
         project: { key: projectKey },
         summary: storySummary,
-        description: storyDescription, // Using the more detailed story description for the main story
+        description: storyDescription,
         issuetype: { id: storyIssueTypeId },
       },
     };
@@ -443,5 +449,3 @@ export async function getJiraIssueTypes(
     };
   }
 }
-
-    

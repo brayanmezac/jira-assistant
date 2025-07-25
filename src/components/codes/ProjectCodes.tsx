@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import Link from 'next/link';
 import {
   Card,
   CardContent,
@@ -13,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Pencil, Trash2, Download } from 'lucide-react';
+import { Loader2, Pencil, Trash2, Download, FileText } from 'lucide-react';
 import type { ProjectCode } from '@/lib/types';
 import {
   Table,
@@ -172,7 +173,7 @@ export function ProjectCodes({
       name: formData.get('name') as string,
     };
 
-    const validatedFields = projectCodeSchema.safeParse(newProjectData);
+    const validatedFields = projectCodeSchema.omit({template: true}).safeParse(newProjectData);
 
     if (!validatedFields.success) {
       toast({
@@ -236,7 +237,7 @@ export function ProjectCodes({
       name: formData.get('edit-name') as string,
     };
 
-    const validatedFields = projectCodeSchema.safeParse(updatedData);
+    const validatedFields = projectCodeSchema.omit({template: true}).safeParse(updatedData);
 
     if (!validatedFields.success) {
       toast({
@@ -354,7 +355,7 @@ export function ProjectCodes({
               <TableRow>
                 <TableHead className="w-[100px]">Code</TableHead>
                 <TableHead>Name</TableHead>
-                <TableHead className="text-right w-[120px]">Actions</TableHead>
+                <TableHead className="text-right w-[150px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -363,6 +364,17 @@ export function ProjectCodes({
                   <TableCell className="font-medium">{project.code}</TableCell>
                   <TableCell>{project.name}</TableCell>
                   <TableCell className="text-right space-x-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      asChild
+                      title="Edit Template"
+                    >
+                      <Link href={`/codes/projects/${project.id}/template`}>
+                        <FileText className="h-4 w-4" />
+                      </Link>
+                    </Button>
                     <Dialog
                       open={editingProject?.id === project.id}
                       onOpenChange={(isOpen) => {
@@ -376,6 +388,7 @@ export function ProjectCodes({
                           size="icon"
                           className="h-8 w-8"
                           onClick={() => setEditingProject(project)}
+                          title="Edit Project"
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
@@ -431,6 +444,7 @@ export function ProjectCodes({
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-destructive hover:text-destructive"
+                          title="Delete Project"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

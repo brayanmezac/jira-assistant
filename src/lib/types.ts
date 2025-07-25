@@ -19,6 +19,7 @@ export type JiraSettings = z.infer<typeof jiraSettingsSchema>;
 export const projectCodeSchema = z.object({
   code: z.string().min(1, { message: 'Code is required.'}),
   name: z.string().min(1, { message: 'Name is required.'}),
+  template: z.string().optional(),
 });
 export type ProjectCode = z.infer<typeof projectCodeSchema> & { id: string };
 
