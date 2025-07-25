@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -5,11 +6,25 @@ import { getTaskCodes } from '@/lib/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckSquare, Loader2 } from 'lucide-react';
 import type { TaskCode } from '@/lib/types';
+import { useSettings } from '@/hooks/use-settings';
+
+const translations = {
+    en: {
+        title: 'Subtasks to be Created',
+        description: 'The following subtasks will be automatically created under the new story, based on your configuration.',
+    },
+    es: {
+        title: 'Subtareas a Crear',
+        description: 'Las siguientes subtareas se crearán automáticamente bajo la nueva historia, según tu configuración.',
+    }
+}
 
 
 export function SubtasksPreview() {
   const [tasks, setTasks] = useState<TaskCode[]>([]);
   const [loading, setLoading] = useState(true);
+  const { settings } = useSettings();
+  const t = translations[settings.language as keyof typeof translations] || translations.en;
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -25,9 +40,9 @@ export function SubtasksPreview() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Subtasks to be Created</CardTitle>
+        <CardTitle>{t.title}</CardTitle>
         <CardDescription>
-          The following subtasks will be automatically created under the new story, based on your configuration.
+          {t.description}
         </CardDescription>
       </CardHeader>
       <CardContent>

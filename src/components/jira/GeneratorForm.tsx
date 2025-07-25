@@ -29,14 +29,51 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { SubmitButton } from '../SubmitButton';
 import { Bot, PencilLine } from 'lucide-react';
+import { useSettings } from '@/hooks/use-settings';
 
 type GeneratorFormProps = {
   formAction: (payload: FormData) => void;
   initialState: any;
 };
 
+const translations = {
+    en: {
+        cardTitle: 'Create New Story',
+        cardDescription: 'Fill in the details below to generate a new Jira story and subtasks.',
+        projectLabel: 'Project',
+        projectPlaceholder: 'Select a project',
+        storyNameLabel: 'Story Name',
+        storyNamePlaceholder: 'e.g., Implement user authentication',
+        storyNumberLabel: 'Story Number',
+        storyNumberPlaceholder: 'e.g., 123',
+        aiContextLabel: 'AI Context',
+        aiContextPlaceholder: 'Provide all relevant meeting notes, technical details, or user requirements. This context will be used by the AI tag in your template.',
+        aiContextDescription: "This context will be injected into your project's template where you've placed an <AI /> tag.",
+        submitButton: 'Prepare for Jira',
+        submittingButton: 'Preparing...',
+    },
+    es: {
+        cardTitle: 'Crear Nueva Historia',
+        cardDescription: 'Completa los detalles a continuación para generar una nueva historia y subtareas de Jira.',
+        projectLabel: 'Proyecto',
+        projectPlaceholder: 'Selecciona un proyecto',
+        storyNameLabel: 'Nombre de la Historia',
+        storyNamePlaceholder: 'Ej: Implementar autenticación de usuarios',
+        storyNumberLabel: 'Número de Historia',
+        storyNumberPlaceholder: 'Ej: 123',
+        aiContextLabel: 'Contexto para la IA',
+        aiContextPlaceholder: 'Proporciona todas las notas de reunión, detalles técnicos o requisitos de usuario relevantes. Este contexto será utilizado por la etiqueta AI en tu plantilla.',
+        aiContextDescription: 'Este contexto se inyectará en la plantilla de tu proyecto donde hayas colocado una etiqueta <AI />.',
+        submitButton: 'Preparar para Jira',
+        submittingButton: 'Preparando...',
+    }
+}
+
+
 export function GeneratorForm({ formAction, initialState }: GeneratorFormProps) {
     const [projects, setProjects] = useState<ProjectCode[]>([]);
+    const { settings } = useSettings();
+    const t = translations[settings.language as keyof typeof translations] || translations.en;
 
     useEffect(() => {
         const fetchProjects = async () => {
@@ -62,8 +99,8 @@ export function GeneratorForm({ formAction, initialState }: GeneratorFormProps) 
       <form action={formAction}>
         <Card>
           <CardHeader>
-            <CardTitle>Create New Story</CardTitle>
-            <CardDescription>Fill in the details below to generate a new Jira story and subtasks.</CardDescription>
+            <CardTitle>{t.cardTitle}</CardTitle>
+            <CardDescription>{t.cardDescription}</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-6">
             <FormField
@@ -71,7 +108,7 @@ export function GeneratorForm({ formAction, initialState }: GeneratorFormProps) 
               name="project"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Project</FormLabel>
+                  <FormLabel>{t.projectLabel}</FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
@@ -79,7 +116,7 @@ export function GeneratorForm({ formAction, initialState }: GeneratorFormProps) 
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a project" />
+                        <SelectValue placeholder={t.projectPlaceholder} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -100,9 +137,9 @@ export function GeneratorForm({ formAction, initialState }: GeneratorFormProps) 
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Story Name</FormLabel>
+                    <FormLabel>{t.storyNameLabel}</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., Implement user authentication" {...field} />
+                      <Input placeholder={t.storyNamePlaceholder} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -113,9 +150,9 @@ export function GeneratorForm({ formAction, initialState }: GeneratorFormProps) 
                 name="number"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Story Number</FormLabel>
+                    <FormLabel>{t.storyNumberLabel}</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="e.g., 123" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)}/>
+                      <Input type="number" placeholder={t.storyNumberPlaceholder} {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)}/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -128,16 +165,16 @@ export function GeneratorForm({ formAction, initialState }: GeneratorFormProps) 
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>AI Context</FormLabel>
+                  <FormLabel>{t.aiContextLabel}</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Provide all relevant meeting notes, technical details, or user requirements. This context will be used by the AI tag in your template."
+                      placeholder={t.aiContextPlaceholder}
                       className="min-h-40"
                       {...field}
                     />
                   </FormControl>
                   <FormDescription>
-                    This context will be injected into your project's template where you've placed an &lt;AI /&gt; tag.
+                    {t.aiContextDescription}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -145,9 +182,9 @@ export function GeneratorForm({ formAction, initialState }: GeneratorFormProps) 
             />
           </CardContent>
           <CardFooter>
-            <SubmitButton loadingText="Preparing...">
+            <SubmitButton loadingText={t.submittingButton}>
                 <PencilLine className="mr-2"/>
-                Prepare for Jira
+                {t.submitButton}
             </SubmitButton>
           </CardFooter>
         </Card>

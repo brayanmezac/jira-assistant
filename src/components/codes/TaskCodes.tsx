@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useRef, useState } from 'react';
@@ -58,6 +59,99 @@ import {
  } from '../ui/dropdown-menu';
 import { z } from 'zod';
 
+const translations = {
+    en: {
+        importFromJira: 'Import from Jira',
+        importFromJson: 'Import from JSON',
+        exportToJson: 'Export to JSON',
+        importTitle: 'Import Issue Types from Jira',
+        importDescription: 'Select issue types to import into your configuration. Already added types are disabled.',
+        issueType: 'Issue Type',
+        action: 'Action',
+        add: 'Add',
+        imported: 'Imported',
+        cardTitle: 'Task Codes',
+        cardDescription: 'Add, import, and manage the subtask codes that will be created.',
+        codeLabel: 'Code (Issue Type ID)',
+        codePlaceholder: 'e.g., 10001',
+        taskTypeLabel: 'Task Type',
+        taskTypePlaceholder: 'e.g., Sub-task',
+        taskNameLabel: 'Task Name',
+        taskNamePlaceholder: 'e.g., Analysis Sub-task',
+        addTask: 'Add Task',
+        tableName: 'Name',
+        tableType: 'Type',
+        tableCode: 'Code (ID)',
+        tableActions: 'Actions',
+        editDialogTitle: 'Edit Task Code',
+        editDialogDescription: "Make changes to your task here. Click save when you're done.",
+        cancel: 'Cancel',
+        saveChanges: 'Save changes',
+        deleteDialogTitle: 'Are you absolutely sure?',
+        deleteDialogDescription: 'This action cannot be undone. This will permanently delete the task code "{taskName}".',
+        deleteConfirm: 'Yes, delete it',
+        // Toasts
+        importSuccess: 'Issue Type "{issueTypeName}" imported successfully.',
+        importError: 'Error importing issue type',
+        addSuccess: 'Task code added successfully.',
+        addError: 'Error adding task',
+        updateSuccess: 'Task code updated successfully.',
+        updateError: 'Error updating task',
+        deleteSuccess: 'Task code deleted successfully.',
+        deleteError: 'Error deleting task',
+        exportSuccess: 'Task codes have been exported to JSON.',
+        importComplete: 'Import Complete',
+        importCompleteDesc: '{count} new task(s) imported successfully.',
+        importFailed: 'Import Failed',
+        importFailedDesc: 'Invalid JSON format or file content.',
+    },
+    es: {
+        importFromJira: 'Importar desde Jira',
+        importFromJson: 'Importar desde JSON',
+        exportToJson: 'Exportar a JSON',
+        importTitle: 'Importar Tipos de Incidencia desde Jira',
+        importDescription: 'Selecciona tipos de incidencia para importar a tu configuración. Los tipos ya agregados están deshabilitados.',
+        issueType: 'Tipo de Incidencia',
+        action: 'Acción',
+        add: 'Añadir',
+        imported: 'Importado',
+        cardTitle: 'Códigos de Tarea',
+        cardDescription: 'Añade, importa y gestiona los códigos de subtarea que se crearán.',
+        codeLabel: 'Código (ID de Tipo de Incidencia)',
+        codePlaceholder: 'Ej: 10001',
+        taskTypeLabel: 'Tipo de Tarea',
+        taskTypePlaceholder: 'Ej: Sub-tarea',
+        taskNameLabel: 'Nombre de la Tarea',
+        taskNamePlaceholder: 'Ej: Sub-tarea de Análisis',
+        addTask: 'Añadir Tarea',
+        tableName: 'Nombre',
+        tableType: 'Tipo',
+        tableCode: 'Código (ID)',
+        tableActions: 'Acciones',
+        editDialogTitle: 'Editar Código de Tarea',
+        editDialogDescription: 'Haz cambios a tu tarea aquí. Haz clic en guardar cuando termines.',
+        cancel: 'Cancelar',
+        saveChanges: 'Guardar cambios',
+        deleteDialogTitle: '¿Estás completamente seguro?',
+        deleteDialogDescription: 'Esta acción no se puede deshacer. Esto eliminará permanentemente el código de tarea "{taskName}".',
+        deleteConfirm: 'Sí, eliminarlo',
+        // Toasts
+        importSuccess: 'Tipo de incidencia "{issueTypeName}" importado con éxito.',
+        importError: 'Error al importar el tipo de incidencia',
+        addSuccess: 'Código de tarea añadido con éxito.',
+        addError: 'Error al añadir la tarea',
+        updateSuccess: 'Código de tarea actualizado con éxito.',
+        updateError: 'Error al actualizar la tarea',
+        deleteSuccess: 'Código de tarea eliminado con éxito.',
+        deleteError: 'Error al eliminar la tarea',
+        exportSuccess: 'Los códigos de tarea han sido exportados a JSON.',
+        importComplete: 'Importación Completa',
+        importCompleteDesc: '{count} nueva(s) tarea(s) importada(s) con éxito.',
+        importFailed: 'Importación Fallida',
+        importFailedDesc: 'Formato JSON o contenido de archivo no válido.',
+    }
+}
+
 function ImportIssueTypesDialog({
     onTaskAdded,
     existingTasks,
@@ -71,6 +165,7 @@ function ImportIssueTypesDialog({
     const [isLoading, setIsLoading] = useState(false);
     const [jiraIssueTypes, setJiraIssueTypes] = useState<JiraApiIssueType[]>([]);
     const [error, setError] = useState<string | null>(null);
+    const t = translations[settings.language as keyof typeof translations] || translations.en;
   
     const handleFetchIssueTypes = async () => {
       setIsLoading(true);
@@ -94,13 +189,13 @@ function ImportIssueTypesDialog({
             });
         toast({
           title: '✅ Success!',
-          description: `Issue Type "${issueType.name}" imported successfully.`,
+          description: t.importSuccess.replace('{issueTypeName}', issueType.name),
         });
         onTaskAdded(newTask);
       } catch (e: any) {
         toast({
           variant: 'destructive',
-          title: '❌ Error importing issue type',
+          title: `❌ ${t.importError}`,
           description: e.message || 'An unexpected error occurred.',
         });
       }
@@ -115,14 +210,14 @@ function ImportIssueTypesDialog({
         <DialogTrigger asChild>
             <DropdownMenuItem onSelect={(e) => e.preventDefault()} onClick={handleFetchIssueTypes}>
                 <Download className="mr-2" />
-                Import from Jira
+                {t.importFromJira}
             </DropdownMenuItem>
         </DialogTrigger>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Import Issue Types from Jira</DialogTitle>
+            <DialogTitle>{t.importTitle}</DialogTitle>
             <DialogDescription>
-              Select issue types to import into your configuration. Already added types are disabled.
+              {t.importDescription}
             </DialogDescription>
           </DialogHeader>
           {isLoading ? (
@@ -136,8 +231,8 @@ function ImportIssueTypesDialog({
               <Table>
                   <TableHeader>
                       <TableRow>
-                          <TableHead>Issue Type</TableHead>
-                          <TableHead className="text-right">Action</TableHead>
+                          <TableHead>{t.issueType}</TableHead>
+                          <TableHead className="text-right">{t.action}</TableHead>
                       </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -149,7 +244,7 @@ function ImportIssueTypesDialog({
                               </TableCell>
                               <TableCell className='text-right'>
                                   <Button size="sm" onClick={() => handleAddTask(it)} disabled={isImported(it.name)}>
-                                    {isImported(it.name) ? 'Imported' : 'Add'}
+                                    {isImported(it.name) ? t.imported : t.add}
                                 </Button>
                               </TableCell>
                           </TableRow>
@@ -171,6 +266,7 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
   const [loading, setLoading] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskCode | null>(null);
   const { settings } = useSettings();
+  const t = translations[settings.language as keyof typeof translations] || translations.en;
 
   const handleTaskAddedFromImport = (newTask: TaskCode) => {
     if (!tasks.some(p => p.id === newTask.id)) {
@@ -229,7 +325,7 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
 
       toast({
         title: '✅ Success!',
-        description: 'Task code added successfully.',
+        description: t.addSuccess,
       });
       setTasks((p) =>
         [newTask, ...p].sort((a, b) => a.name.localeCompare(b.name))
@@ -239,7 +335,7 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
       console.error(error);
       toast({
         variant: 'destructive',
-        title: '❌ Error adding task',
+        title: `❌ ${t.addError}`,
         description: 'An error occurred. Check the developer console for details.',
       });
     } finally {
@@ -281,7 +377,7 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
       await updateTaskCode(editingTask.id, dataToUpdate);
       toast({
         title: '✅ Success!',
-        description: 'Task code updated successfully.',
+        description: t.updateSuccess,
       });
       setTasks((p) =>
         p
@@ -297,7 +393,7 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
       console.error(error);
       toast({
         variant: 'destructive',
-        title: '❌ Error updating task',
+        title: `❌ ${t.updateError}`,
         description: 'An error occurred. Check the developer console for details.',
       });
     } finally {
@@ -310,14 +406,14 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
       await deleteTaskCode(taskId);
       toast({
         title: '✅ Success!',
-        description: 'Task code deleted successfully.',
+        description: t.deleteSuccess,
       });
       setTasks((p) => p.filter((task) => task.id !== taskId));
     } catch (error) {
       console.error(error);
       toast({
         variant: 'destructive',
-        title: '❌ Error deleting task',
+        title: `❌ ${t.deleteError}`,
         description: 'An error occurred. Check the developer console for details.',
       });
     }
@@ -334,8 +430,7 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
     linkElement.setAttribute('download', exportFileDefaultName);
     linkElement.click();
     toast({
-        title: '✅ Exported!',
-        description: 'Task codes have been exported to JSON.',
+        title: `✅ ${t.exportSuccess}`,
     });
   }
 
@@ -359,15 +454,15 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
           }
         }
         toast({
-            title: `✅ Import Complete`,
-            description: `${importedCount} new task(s) imported successfully.`,
+            title: `✅ ${t.importComplete}`,
+            description: t.importCompleteDesc.replace('{count}', importedCount.toString()),
         });
 
       } catch (err) {
         toast({
             variant: 'destructive',
-            title: '❌ Import Failed',
-            description: 'Invalid JSON format or file content.',
+            title: `❌ ${t.importFailed}`,
+            description: t.importFailedDesc,
         });
       }
     };
@@ -380,9 +475,9 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
       <CardHeader>
         <div className="flex justify-between items-start">
           <div>
-            <CardTitle>Task Codes</CardTitle>
+            <CardTitle>{t.cardTitle}</CardTitle>
             <CardDescription className="mt-1">
-              Add, import, and manage the subtask codes that will be created.
+              {t.cardDescription}
             </CardDescription>
           </div>
           <DropdownMenu>
@@ -395,11 +490,11 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
                 <ImportIssueTypesDialog onTaskAdded={handleTaskAddedFromImport} existingTasks={tasks} />
                 <DropdownMenuItem onClick={() => importFileRef.current?.click()}>
                     <Upload className="mr-2" />
-                    Import from JSON
+                    {t.importFromJson}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleExport}>
                     <Download className="mr-2" />
-                    Export to JSON
+                    {t.exportToJson}
                 </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -410,37 +505,37 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2 col-span-1">
-              <Label htmlFor="code">Code (Issue Type ID)</Label>
+              <Label htmlFor="code">{t.codeLabel}</Label>
               <Input
                 id="code"
                 name="code"
-                placeholder="e.g., 10001"
+                placeholder={t.codePlaceholder}
                 required
               />
             </div>
             <div className="space-y-2 col-span-1">
-              <Label htmlFor="type">Task Type</Label>
+              <Label htmlFor="type">{t.taskTypeLabel}</Label>
               <Input
                 id="type"
                 name="type"
-                placeholder="e.g., Sub-task"
+                placeholder={t.taskTypePlaceholder}
                 required
               />
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="name">Task Name</Label>
+            <Label htmlFor="name">{t.taskNameLabel}</Label>
             <Input
               id="name"
               name="name"
-              placeholder="e.g., Analysis Sub-task"
+              placeholder={t.taskNamePlaceholder}
               required
             />
           </div>
           <CardFooter className="px-0 pb-0 pt-2">
             <Button type="submit" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Add Task
+              {t.addTask}
             </Button>
           </CardFooter>
         </form>
@@ -448,10 +543,10 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
           <Table>
             <TableHeader className="sticky top-0 bg-card">
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Code (ID)</TableHead>
-                <TableHead className="text-right w-[120px]">Actions</TableHead>
+                <TableHead>{t.tableName}</TableHead>
+                <TableHead>{t.tableType}</TableHead>
+                <TableHead>{t.tableCode}</TableHead>
+                <TableHead className="text-right w-[120px]">{t.tableActions}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -483,10 +578,9 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
                       </DialogTrigger>
                       <DialogContent>
                         <DialogHeader>
-                          <DialogTitle>Edit Task Code</DialogTitle>
+                          <DialogTitle>{t.editDialogTitle}</DialogTitle>
                           <DialogDescription>
-                            Make changes to your task here. Click save when
-                            you're done.
+                            {t.editDialogDescription}
                           </DialogDescription>
                         </DialogHeader>
                         <form
@@ -494,7 +588,7 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
                           className="space-y-4 py-4"
                         >
                           <div className="space-y-2">
-                            <Label htmlFor="edit-name">Task Name</Label>
+                            <Label htmlFor="edit-name">{t.taskNameLabel}</Label>
                             <Input
                               id="edit-name"
                               name="edit-name"
@@ -503,7 +597,7 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="edit-type">Task Type</Label>
+                            <Label htmlFor="edit-type">{t.taskTypeLabel}</Label>
                             <Input
                               id="edit-type"
                               name="edit-type"
@@ -512,7 +606,7 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="edit-code">Code (Issue Type ID)</Label>
+                            <Label htmlFor="edit-code">{t.codeLabel}</Label>
                             <Input
                               id="edit-code"
                               name="edit-code"
@@ -523,12 +617,12 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
                           <DialogFooter>
                             <DialogClose asChild>
                               <Button type="button" variant="secondary">
-                                Cancel
+                                {t.cancel}
                               </Button>
                             </DialogClose>
                             <Button type="submit" disabled={loading}>
                                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Save changes
+                                {t.saveChanges}
                             </Button>
                           </DialogFooter>
                         </form>
@@ -547,20 +641,19 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
                       <AlertDialogContent>
                         <AlertDialogHeader>
                           <AlertDialogTitle>
-                            Are you absolutely sure?
+                            {t.deleteDialogTitle}
                           </AlertDialogTitle>
                           <AlertDialogDescription>
-                            This action cannot be undone. This will permanently
-                            delete the task code "{task.name}".
+                            {t.deleteDialogDescription.replace('{taskName}', task.name)}
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogCancel>{t.cancel}</AlertDialogCancel>
                           <AlertDialogAction
                             onClick={() => handleDelete(task.id)}
                              className="bg-destructive hover:bg-destructive/90"
                           >
-                            Yes, delete it
+                            {t.deleteConfirm}
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>

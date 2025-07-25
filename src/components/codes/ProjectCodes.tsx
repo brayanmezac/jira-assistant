@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useRef, useState } from 'react';
@@ -51,6 +52,81 @@ import { useSettings } from '@/hooks/use-settings';
 import { validateJiraProject, getJiraProjects, type JiraApiProject } from '@/app/actions';
 import { ScrollArea } from '../ui/scroll-area';
 
+const translations = {
+    en: {
+      importFromJira: 'Import from Jira',
+      importTitle: 'Import Projects from Jira',
+      importDescription: 'Select projects to import into your configuration. Already added projects are disabled.',
+      projectName: 'Project Name',
+      code: 'Code',
+      action: 'Action',
+      add: 'Add',
+      cardTitle: 'Project Codes',
+      cardDescription: 'Add, import, and manage the Jira project codes. Each code is validated against Jira.',
+      addProject: 'Add Project',
+      actions: 'Actions',
+      editTemplate: 'Edit Template',
+      editProject: 'Edit Project',
+      deleteProject: 'Delete Project',
+      editDialogTitle: 'Edit Project Code',
+      editDialogDescription: 'Make changes to your project here. Click save when you\'re done.',
+      cancel: 'Cancel',
+      saveChanges: 'Save changes',
+      deleteDialogTitle: 'Are you absolutely sure?',
+      deleteDialogDescription: 'This action cannot be undone. This will permanently delete the project code "{projectName}".',
+      deleteConfirm: 'Yes, delete it',
+      // Toasts
+      errorRequired: 'Code and Name are required.',
+      validationFailed: 'Jira Validation Failed',
+      validationFailedDesc: 'Could not validate the project in Jira.',
+      addSuccess: 'Project code added successfully after validation.',
+      addError: 'Error adding project',
+      addErrorDesc: 'An error occurred. Check the developer console for details.',
+      updateSuccess: 'Project code updated successfully.',
+      updateError: 'Error updating project',
+      deleteSuccess: 'Project code deleted successfully.',
+      deleteError: 'Error deleting project',
+      importSuccess: 'Project "{projectName}" imported successfully.',
+      importError: 'Error importing project',
+    },
+    es: {
+      importFromJira: 'Importar desde Jira',
+      importTitle: 'Importar Proyectos desde Jira',
+      importDescription: 'Selecciona proyectos para importar a tu configuración. Los proyectos ya agregados están deshabilitados.',
+      projectName: 'Nombre del Proyecto',
+      code: 'Código',
+      action: 'Acción',
+      add: 'Añadir',
+      cardTitle: 'Códigos de Proyecto',
+      cardDescription: 'Añade, importa y gestiona los códigos de proyecto de Jira. Cada código se valida contra Jira.',
+      addProject: 'Añadir Proyecto',
+      actions: 'Acciones',
+      editTemplate: 'Editar Plantilla',
+      editProject: 'Editar Proyecto',
+      deleteProject: 'Eliminar Proyecto',
+      editDialogTitle: 'Editar Código de Proyecto',
+      editDialogDescription: 'Haz cambios a tu proyecto aquí. Haz clic en guardar cuando termines.',
+      cancel: 'Cancelar',
+      saveChanges: 'Guardar cambios',
+      deleteDialogTitle: '¿Estás completamente seguro?',
+      deleteDialogDescription: 'Esta acción no se puede deshacer. Esto eliminará permanentemente el código de proyecto "{projectName}".',
+      deleteConfirm: 'Sí, eliminarlo',
+      // Toasts
+      errorRequired: 'El código y el nombre son obligatorios.',
+      validationFailed: 'Falló la validación de Jira',
+      validationFailedDesc: 'No se pudo validar el proyecto en Jira.',
+      addSuccess: 'Código de proyecto añadido con éxito tras la validación.',
+      addError: 'Error al añadir el proyecto',
+      addErrorDesc: 'Ocurrió un error. Revisa la consola del desarrollador para más detalles.',
+      updateSuccess: 'Código de proyecto actualizado con éxito.',
+      updateError: 'Error al actualizar el proyecto',
+      deleteSuccess: 'Código de proyecto eliminado con éxito.',
+      deleteError: 'Error al eliminar el proyecto',
+      importSuccess: 'Proyecto "{projectName}" importado con éxito.',
+      importError: 'Error al importar el proyecto',
+    }
+}
+
 function ImportProjectsDialog({
   onProjectAdded,
 }: {
@@ -62,6 +138,7 @@ function ImportProjectsDialog({
   const [isLoading, setIsLoading] = useState(false);
   const [jiraProjects, setJiraProjects] = useState<JiraApiProject[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const t = translations[settings.language as keyof typeof translations] || translations.en;
 
   const handleFetchProjects = async () => {
     setIsLoading(true);
@@ -80,13 +157,13 @@ function ImportProjectsDialog({
       const newProject = await addProjectCode({ name: project.name, code: project.key });
       toast({
         title: '✅ Success!',
-        description: `Project "${project.name}" imported successfully.`,
+        description: t.importSuccess.replace('{projectName}', project.name),
       });
       onProjectAdded(newProject);
     } catch (e: any) {
       toast({
         variant: 'destructive',
-        title: '❌ Error importing project',
+        title: `❌ ${t.importError}`,
         description: e.message || 'An unexpected error occurred.',
       });
     }
@@ -97,14 +174,14 @@ function ImportProjectsDialog({
       <DialogTrigger asChild>
         <Button variant="outline" onClick={handleFetchProjects}>
           <Download className="mr-2" />
-          Import from Jira
+          {t.importFromJira}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Import Projects from Jira</DialogTitle>
+          <DialogTitle>{t.importTitle}</DialogTitle>
           <DialogDescription>
-            Select projects to import into your configuration. Already added projects are disabled.
+            {t.importDescription}
           </DialogDescription>
         </DialogHeader>
         {isLoading ? (
@@ -118,9 +195,9 @@ function ImportProjectsDialog({
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead>Project Name</TableHead>
-                        <TableHead>Code</TableHead>
-                        <TableHead className="text-right">Action</TableHead>
+                        <TableHead>{t.projectName}</TableHead>
+                        <TableHead>{t.code}</TableHead>
+                        <TableHead className="text-right">{t.action}</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -129,7 +206,7 @@ function ImportProjectsDialog({
                             <TableCell className='font-medium'>{p.name}</TableCell>
                             <TableCell>{p.key}</TableCell>
                             <TableCell className='text-right'>
-                                <Button size="sm" onClick={() => handleAddProject(p)}>Add</Button>
+                                <Button size="sm" onClick={() => handleAddProject(p)}>{t.add}</Button>
                             </TableCell>
                         </TableRow>
                     ))}
@@ -156,6 +233,7 @@ export function ProjectCodes({
     null
   );
   const { settings } = useSettings();
+  const t = translations[settings.language as keyof typeof translations] || translations.en;
 
   const handleProjectAddedFromImport = (newProject: ProjectCode) => {
     if (!projects.some(p => p.id === newProject.id)) {
@@ -179,7 +257,7 @@ export function ProjectCodes({
       toast({
         variant: 'destructive',
         title: '❌ Error',
-        description: 'Code and Name are required.',
+        description: t.errorRequired,
       });
       setLoading(false);
       return;
@@ -194,8 +272,8 @@ export function ProjectCodes({
     if (!validationResult.success) {
       toast({
         variant: 'destructive',
-        title: 'Jira Validation Failed',
-        description: validationResult.message || 'Could not validate the project in Jira.',
+        title: t.validationFailed,
+        description: validationResult.message || t.validationFailedDesc,
       });
       setLoading(false);
       return;
@@ -207,7 +285,7 @@ export function ProjectCodes({
 
       toast({
         title: '✅ Success!',
-        description: 'Project code added successfully after validation.',
+        description: t.addSuccess,
       });
       setProjects((p) =>
         [newProject, ...p].sort((a, b) => a.name.localeCompare(b.name))
@@ -217,8 +295,8 @@ export function ProjectCodes({
       console.error(error);
       toast({
         variant: 'destructive',
-        title: '❌ Error adding project',
-        description: 'An error occurred. Check the developer console for details.',
+        title: `❌ ${t.addError}`,
+        description: t.addErrorDesc,
       });
     } finally {
       setLoading(false);
@@ -243,7 +321,7 @@ export function ProjectCodes({
       toast({
         variant: 'destructive',
         title: '❌ Error',
-        description: 'Code and Name are required.',
+        description: t.errorRequired,
       });
       setLoading(false);
       return;
@@ -258,8 +336,8 @@ export function ProjectCodes({
     if (!validationResult.success) {
       toast({
         variant: 'destructive',
-        title: 'Jira Validation Failed',
-        description: validationResult.message || 'Could not validate the project in Jira.',
+        title: t.validationFailed,
+        description: validationResult.message || t.validationFailedDesc,
       });
       setLoading(false);
       return;
@@ -270,7 +348,7 @@ export function ProjectCodes({
       await updateProjectCode(editingProject.id, validatedFields.data);
       toast({
         title: '✅ Success!',
-        description: 'Project code updated successfully.',
+        description: t.updateSuccess,
       });
       setProjects((p) =>
         p
@@ -286,8 +364,8 @@ export function ProjectCodes({
       console.error(error);
       toast({
         variant: 'destructive',
-        title: '❌ Error updating project',
-        description: 'An error occurred. Check the developer console for details.',
+        title: `❌ ${t.updateError}`,
+        description: t.addErrorDesc,
       });
     } finally {
       setLoading(false);
@@ -299,15 +377,15 @@ export function ProjectCodes({
       await deleteProjectCode(projectId);
       toast({
         title: '✅ Success!',
-        description: 'Project code deleted successfully.',
+        description: t.deleteSuccess,
       });
       setProjects((p) => p.filter((proj) => proj.id !== projectId));
     } catch (error) {
       console.error(error);
       toast({
         variant: 'destructive',
-        title: '❌ Error deleting project',
-        description: 'An error occurred. Check the developer console for details.',
+        title: `❌ ${t.deleteError}`,
+        description: t.addErrorDesc,
       });
     }
   };
@@ -317,9 +395,9 @@ export function ProjectCodes({
       <CardHeader>
         <div className="flex justify-between items-start">
             <div>
-                <CardTitle>Project Codes</CardTitle>
+                <CardTitle>{t.cardTitle}</CardTitle>
                 <CardDescription className="mt-1">
-                Add, import, and manage the Jira project codes. Each code is validated against Jira.
+                {t.cardDescription}
                 </CardDescription>
             </div>
             <ImportProjectsDialog onProjectAdded={handleProjectAddedFromImport} />
@@ -329,11 +407,11 @@ export function ProjectCodes({
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2 col-span-1">
-              <Label htmlFor="code">Code</Label>
+              <Label htmlFor="code">{t.code}</Label>
               <Input id="code" name="code" placeholder="e.g., TPP" required />
             </div>
             <div className="space-y-2 col-span-2">
-              <Label htmlFor="name">Project Name</Label>
+              <Label htmlFor="name">{t.projectName}</Label>
               <Input
                 id="name"
                 name="name"
@@ -345,7 +423,7 @@ export function ProjectCodes({
           <CardFooter className="px-0 pb-0 pt-2">
             <Button type="submit" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Add Project
+              {t.addProject}
             </Button>
           </CardFooter>
         </form>
@@ -353,9 +431,9 @@ export function ProjectCodes({
           <Table>
             <TableHeader className="sticky top-0 bg-card">
               <TableRow>
-                <TableHead className="w-[100px]">Code</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead className="text-right w-[150px]">Actions</TableHead>
+                <TableHead className="w-[100px]">{t.code}</TableHead>
+                <TableHead>{t.projectName}</TableHead>
+                <TableHead className="text-right w-[150px]">{t.actions}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -369,7 +447,7 @@ export function ProjectCodes({
                       size="icon"
                       className="h-8 w-8"
                       asChild
-                      title="Edit Template"
+                      title={t.editTemplate}
                     >
                       <Link href={`/codes/projects/${project.id}/template`}>
                         <FileText className="h-4 w-4" />
@@ -388,17 +466,16 @@ export function ProjectCodes({
                           size="icon"
                           className="h-8 w-8"
                           onClick={() => setEditingProject(project)}
-                          title="Edit Project"
+                          title={t.editProject}
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
                       </DialogTrigger>
                       <DialogContent>
                         <DialogHeader>
-                          <DialogTitle>Edit Project Code</DialogTitle>
+                          <DialogTitle>{t.editDialogTitle}</DialogTitle>
                           <DialogDescription>
-                            Make changes to your project here. Click save when
-                            you're done.
+                            {t.editDialogDescription}
                           </DialogDescription>
                         </DialogHeader>
                         <form
@@ -406,7 +483,7 @@ export function ProjectCodes({
                           className="space-y-4 py-4"
                         >
                           <div className="space-y-2">
-                            <Label htmlFor="edit-code">Code</Label>
+                            <Label htmlFor="edit-code">{t.code}</Label>
                             <Input
                               id="edit-code"
                               name="edit-code"
@@ -415,7 +492,7 @@ export function ProjectCodes({
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="edit-name">Project Name</Label>
+                            <Label htmlFor="edit-name">{t.projectName}</Label>
                             <Input
                               id="edit-name"
                               name="edit-name"
@@ -426,12 +503,12 @@ export function ProjectCodes({
                           <DialogFooter>
                             <DialogClose asChild>
                               <Button type="button" variant="secondary">
-                                Cancel
+                                {t.cancel}
                               </Button>
                             </DialogClose>
                             <Button type="submit" disabled={loading}>
                               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                              Save changes
+                              {t.saveChanges}
                             </Button>
                           </DialogFooter>
                         </form>
@@ -444,7 +521,7 @@ export function ProjectCodes({
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                          title="Delete Project"
+                          title={t.deleteProject}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -452,20 +529,19 @@ export function ProjectCodes({
                       <AlertDialogContent>
                         <AlertDialogHeader>
                           <AlertDialogTitle>
-                            Are you absolutely sure?
+                            {t.deleteDialogTitle}
                           </AlertDialogTitle>
                           <AlertDialogDescription>
-                            This action cannot be undone. This will permanently
-                            delete the project code "{project.name}".
+                            {t.deleteDialogDescription.replace('{projectName}', project.name)}
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogCancel>{t.cancel}</AlertDialogCancel>
                           <AlertDialogAction
                             onClick={() => handleDelete(project.id)}
                             className="bg-destructive hover:bg-destructive/90"
                           >
-                            Yes, delete it
+                            {t.deleteConfirm}
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>

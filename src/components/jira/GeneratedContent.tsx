@@ -19,8 +19,47 @@ type GeneratedContentProps = {
   tasks: TaskCode[];
 };
 
+const translations = {
+    en: {
+        copy: 'Copy',
+        devStoryContent: 'Development Story Content',
+        devStoryDescription: 'This is the content that will be used for the main development sub-task.',
+        finalStep: 'Final Step',
+        finalStepDescription: 'Once you\'re happy with the content, create the tickets in Jira.',
+        createInJira: 'Create in Jira',
+        creatingInJira: 'Creating in Jira...',
+        configMissingTitle: 'Configuration Missing',
+        configMissingDescription: 'Please configure your Jira settings before creating tickets.',
+        successTitle: '✅ Success!',
+        successDescription: 'Jira tickets created successfully.',
+        viewStory: 'View Story on Jira',
+        creationFailedTitle: 'Jira Creation Failed',
+        clientErrorTitle: 'Client-side Error',
+        clientErrorDescription: 'An unexpected error occurred. Check the browser console.',
+    },
+    es: {
+        copy: 'Copiar',
+        devStoryContent: 'Contenido de la Historia de Desarrollo',
+        devStoryDescription: 'Este es el contenido que se usará para la subtarea principal de desarrollo.',
+        finalStep: 'Paso Final',
+        finalStepDescription: 'Cuando estés satisfecho con el contenido, crea los tickets en Jira.',
+        createInJira: 'Crear en Jira',
+        creatingInJira: 'Creando en Jira...',
+        configMissingTitle: 'Configuración Faltante',
+        configMissingDescription: 'Por favor, configura tus ajustes de Jira antes de crear tickets.',
+        successTitle: '✅ ¡Éxito!',
+        successDescription: 'Tickets de Jira creados con éxito.',
+        viewStory: 'Ver Historia en Jira',
+        creationFailedTitle: 'Falló la Creación en Jira',
+        clientErrorTitle: 'Error del Lado del Cliente',
+        clientErrorDescription: 'Ocurrió un error inesperado. Revisa la consola del navegador.',
+    }
+};
+
 function ContentDisplay({ content }: { content: string }) {
   const [copied, setCopied] = useState(false);
+  const { settings } = useSettings();
+  const t = translations[settings.language as keyof typeof translations] || translations.en;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(content);
@@ -37,7 +76,7 @@ function ContentDisplay({ content }: { content: string }) {
         onClick={handleCopy}
       >
         {copied ? <CheckCircle className="text-green-500" /> : <Clipboard />}
-        <span className="sr-only">Copy</span>
+        <span className="sr-only">{t.copy}</span>
       </Button>
       <div className="prose prose-sm dark:prose-invert max-w-none rounded-md border bg-muted/50 p-4 h-96 overflow-auto whitespace-pre-wrap">
         {content}
@@ -50,6 +89,7 @@ export function GeneratedContent({ storyDescription, storyName, projectKey, stor
   const { toast } = useToast();
   const [isCreating, setIsCreating] = useState(false);
   const { settings } = useSettings();
+  const t = translations[settings.language as keyof typeof translations] || translations.en;
   
   const handleCreateInJira = async () => {
     setIsCreating(true);
@@ -57,8 +97,8 @@ export function GeneratedContent({ storyDescription, storyName, projectKey, stor
     if (!settings.url || !settings.email || !settings.token) {
         toast({
           variant: 'destructive',
-          title: 'Configuration Missing',
-          description: 'Please configure your Jira settings before creating tickets.',
+          title: t.configMissingTitle,
+          description: t.configMissingDescription,
         });
         setIsCreating(false);
         return;
@@ -79,17 +119,17 @@ export function GeneratedContent({ storyDescription, storyName, projectKey, stor
         if (result.success && result.data) {
             const storyUrl = `${settings.url}/browse/${result.data.storyKey}`;
             toast({
-              title: "✅ Success!",
+              title: t.successTitle,
               description: (
                 <p>
-                  Jira tickets created successfully. {' '}
+                  {t.successDescription}{' '}
                   <a 
                     href={storyUrl} 
                     target="_blank"
                     rel="noopener noreferrer"
                     className="underline font-medium"
                   >
-                    View Story on Jira
+                    {t.viewStory}
                   </a>
                 </p>
               ),
@@ -98,7 +138,7 @@ export function GeneratedContent({ storyDescription, storyName, projectKey, stor
         } else {
             toast({
                 variant: 'destructive',
-                title: 'Jira Creation Failed',
+                title: t.creationFailedTitle,
                 description: result.message,
             });
         }
@@ -106,8 +146,8 @@ export function GeneratedContent({ storyDescription, storyName, projectKey, stor
         console.error("Error in handleCreateInJira:", error);
         toast({
             variant: 'destructive',
-            title: 'Client-side Error',
-            description: 'An unexpected error occurred. Check the browser console.',
+            title: t.clientErrorTitle,
+            description: t.clientErrorDescription,
         });
     } finally {
         setIsCreating(false);
@@ -119,9 +159,9 @@ export function GeneratedContent({ storyDescription, storyName, projectKey, stor
       <div className="lg:col-span-2">
          <Card>
             <CardHeader>
-            <CardTitle>Development Story Content</CardTitle>
+            <CardTitle>{t.devStoryContent}</CardTitle>
             <CardDescription>
-                This is the content that will be used for the main development sub-task.
+                {t.devStoryDescription}
             </CardDescription>
             </CardHeader>
             <CardContent>
@@ -133,9 +173,9 @@ export function GeneratedContent({ storyDescription, storyName, projectKey, stor
         <SubtasksPreview />
         <Card className="mt-8">
           <CardHeader>
-            <CardTitle>Final Step</CardTitle>
+            <CardTitle>{t.finalStep}</CardTitle>
             <CardDescription>
-              Once you're happy with the content, create the tickets in Jira.
+              {t.finalStepDescription}
             </CardDescription>
           </CardHeader>
           <CardFooter>
@@ -143,10 +183,10 @@ export function GeneratedContent({ storyDescription, storyName, projectKey, stor
               {isCreating ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating in Jira...
+                  {t.creatingInJira}
                 </>
               ) : (
-                'Create in Jira'
+                t.createInJira
               )}
             </Button>
           </CardFooter>
