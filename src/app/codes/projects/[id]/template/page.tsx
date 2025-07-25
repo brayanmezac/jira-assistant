@@ -114,7 +114,7 @@ export default function EditTemplatePage() {
             <CardTitle>Description Template</CardTitle>
             <CardDescription>
                 Create a template for the story description. Use Jira's rich text format. 
-                Insert <code className="bg-muted px-1 py-0.5 rounded-sm font-mono text-sm">{'{{{storyDescription}}}'}</code> where you want the user-provided story details to be injected.
+                You can use the <code className="bg-muted px-1 py-0.5 rounded-sm font-mono text-sm">{'<AI />'}</code> tag to dynamically generate content based on the AI Context provided in the main form.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -124,7 +124,7 @@ export default function EditTemplatePage() {
                 id="template"
                 value={template}
                 onChange={(e) => setTemplate(e.target.value)}
-                placeholder="h2. Objetivo..."
+                placeholder={'h2. Objetivo\n\n<AI prompt="Describe el objetivo de esta historia." />'}
                 className="min-h-80 font-mono"
               />
             </div>

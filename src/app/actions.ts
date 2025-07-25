@@ -9,6 +9,8 @@ import {
   type TaskCode,
 } from '@/lib/types';
 import { getTaskCodes, getProjectCodes, getProjectCode } from '@/lib/firebase';
+import { generateText } from '@/ai/flows/generic-text-generation';
+
 
 export type FormState = {
   success: boolean;
@@ -21,6 +23,51 @@ export type FormState = {
     tasks: TaskCode[];
   };
 };
+
+/**
+ * Processes a template string, finds an <AI> tag, and replaces it with AI-generated content.
+ * @param template The template string to process.
+ * @param context The user-provided context to inject into the AI prompt.
+ * @returns The processed string with the AI content injected.
+ */
+async function processTemplateWithAI(template: string, context: string): Promise<string> {
+    const aiTagRegex = /<AI\s+([^>]+)\s*\/>/s;
+    const match = template.match(aiTagRegex);
+
+    if (!match) {
+        // No AI tag found, return the template as is.
+        return template;
+    }
+
+    const attrsString = match[1];
+    const getAttr = (name: string) => {
+        const regex = new RegExp(`${name}="([^"]+)"`);
+        const attrMatch = attrsString.match(regex);
+        return attrMatch ? attrMatch[1] : '';
+    };
+
+    const prompt = getAttr('prompt');
+    const system = getAttr('system');
+    
+    // Combine the prompt from the tag with the user-provided context
+    const fullPrompt = `${prompt}\n\nContexto:\n\`\`\`\n${context}\n\`\`\``;
+
+    try {
+        const aiResult = await generateText({
+            prompt: fullPrompt,
+            systemInstruction: system,
+        });
+        // Replace the AI tag with the generated text
+        return template.replace(aiTagRegex, aiResult.generatedText);
+    } catch (error) {
+        console.error("Error during AI tag processing:", error);
+        // In case of an error, we can return the template with an error message,
+        // or just the original template. Returning with an error is more informative.
+        const errorMessage = `[AI Generation Failed: ${error instanceof Error ? error.message : 'Unknown error'}]`;
+        return template.replace(aiTagRegex, errorMessage);
+    }
+}
+
 
 export async function generateJiraTicketsAction(
   _prevState: FormState,
@@ -55,9 +102,10 @@ export async function generateJiraTicketsAction(
     
     // Fetch full project details to get the template
     const fullProject = await getProjectCode(projectInfo.id);
-    const template = fullProject?.template || '{{{storyDescription}}}'; // Default to just the description if no template
+    const template = fullProject?.template || ''; // Default to empty if no template
     
-    const finalDescription = template.replace('{{{storyDescription}}}', description);
+    // Process the template, which may or may not involve an AI call
+    const finalDescription = await processTemplateWithAI(template, description);
 
     const projectKey = projectInfo.code;
     const subtasks = await getTaskCodes();
@@ -66,7 +114,7 @@ export async function generateJiraTicketsAction(
       success: true,
       message: 'Content ready for Jira.',
       data: {
-        storyDescription: finalDescription, // Use the template-injected description
+        storyDescription: finalDescription, // Use the template-processed description
         storyName: name,
         projectKey: projectKey,
         storyNumber: number,

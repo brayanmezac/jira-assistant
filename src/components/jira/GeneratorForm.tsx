@@ -128,16 +128,16 @@ export function GeneratorForm({ formAction, initialState }: GeneratorFormProps) 
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Story Description</FormLabel>
+                  <FormLabel>AI Context</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Provide all relevant information, meeting notes, and technical details for the story..."
+                      placeholder="Provide all relevant meeting notes, technical details, or user requirements. This context will be used by the AI tag in your template."
                       className="min-h-40"
                       {...field}
                     />
                   </FormControl>
                   <FormDescription>
-                    This content will be used as the main description for the story and development sub-task.
+                    This context will be injected into your project's template where you've placed an &lt;AI /&gt; tag.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
