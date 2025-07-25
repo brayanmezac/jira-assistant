@@ -69,6 +69,7 @@ export function GeneratedContent({ storyDescription, storyName, projectKey, stor
     try {
         const result = await createJiraTickets({
             storySummary: storySummary,
+            storyNumber: storyNumber,
             storyDescription: storyDescription,
             projectKey: projectKey,
             settings: settings,
@@ -154,5 +155,3 @@ export function GeneratedContent({ storyDescription, storyName, projectKey, stor
     </div>
   );
 }
-
-    

@@ -78,6 +78,7 @@ export async function generateJiraTicketsAction(
 
 const createJiraTicketsInput = z.object({
   storySummary: z.string(),
+  storyNumber: z.number(), // Added story number for subtask title construction
   storyDescription: z.string(),
   projectKey: z.string(),
   settings: jiraSettingsSchema,
@@ -99,6 +100,7 @@ export async function createJiraTickets(
 ): Promise<JiraResult> {
   const {
     storySummary,
+    storyNumber,
     storyDescription,
     projectKey,
     settings,
@@ -174,7 +176,7 @@ export async function createJiraTickets(
     console.log(`[JIRA DEBUG] Found ${tasks.length} sub-tasks to create.`);
     for (const subtask of tasks) {
       // Construct summary for subtask: PROJECTCODE_STORYNUMBER_TASKCODE TASKNAME
-      const subtaskSummary = `${projectKey}_${input.storySummary.split(' - ')[0].split('_')[1]}_${subtask.code} ${subtask.name}`;
+      const subtaskSummary = `${projectKey}_${storyNumber}_${subtask.code} ${subtask.name}`;
 
       // Conditional description for development task
       let subtaskDescription = '';
@@ -197,7 +199,7 @@ Se adjunta estimador:`;
       const subtaskPayload = {
         fields: {
           project: { key: projectKey },
-          summary: subtask.name, // The n8n flow uses a constructed name, but simple name is cleaner
+          summary: subtaskSummary, // Use the constructed summary
           description: subtaskDescription,
           issuetype: { id: subtask.code }, // Use the ID from task config
           parent: { key: storyKey }, // Link to the main story created above
@@ -441,5 +443,3 @@ export async function getJiraIssueTypes(
     };
   }
 }
-
-    
