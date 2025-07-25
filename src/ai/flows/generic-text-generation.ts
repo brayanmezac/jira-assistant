@@ -18,16 +18,6 @@ const GenericTextGenerationOutputSchema = z.object({
 });
 export type GenericTextGenerationOutput = z.infer<typeof GenericTextGenerationOutputSchema>;
 
-
-const genericTextPrompt = ai.definePrompt({
-    name: 'genericTextPrompt',
-    input: { schema: GenericTextGenerationInputSchema },
-    output: { schema: GenericTextGenerationOutputSchema },
-    system: '{{{systemInstruction}}}',
-    prompt: `{{{prompt}}}`,
-});
-
-
 export const generateTextFlow = ai.defineFlow(
   {
     name: 'generateTextFlow',
@@ -35,11 +25,13 @@ export const generateTextFlow = ai.defineFlow(
     outputSchema: GenericTextGenerationOutputSchema,
   },
   async (input) => {
-    const { output } = await genericTextPrompt(input);
-    if (!output) {
-      throw new Error("AI generation failed to produce output.");
-    }
-    return { generatedText: output.generatedText };
+    const { text } = await ai.generate({
+      model: 'googleai/gemini-pro',
+      prompt: input.prompt,
+      system: input.systemInstruction,
+    });
+    
+    return { generatedText: text };
   }
 );
 
