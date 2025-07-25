@@ -6,6 +6,7 @@ import { ProjectCodes } from '@/components/codes/ProjectCodes';
 import { getProjectCodes } from '@/lib/firebase';
 import type { ProjectCode } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useSettings } from '@/hooks/use-settings';
 
 function CodesSkeleton() {
   return (
@@ -17,9 +18,22 @@ function CodesSkeleton() {
   );
 }
 
+const translations = {
+  en: {
+    title: 'Project Code Configuration',
+    description: 'Manage your project codes for Jira ticket generation.',
+  },
+  es: {
+    title: 'Configuración de Códigos de Proyecto',
+    description: 'Gestiona los códigos de tus proyectos para la generación de tickets de Jira.',
+  }
+}
+
 export default function ProjectCodesPage() {
   const [projects, setProjects] = useState<ProjectCode[]>([]);
   const [loading, setLoading] = useState(true);
+  const { settings } = useSettings();
+  const t = translations[settings.language as keyof typeof translations] || translations.en;
 
   useEffect(() => {
     async function loadData() {
@@ -40,10 +54,10 @@ export default function ProjectCodesPage() {
     <div className="flex flex-col gap-8">
       <header>
         <h1 className="text-3xl font-headline font-bold tracking-tight">
-          Project Code Configuration
+          {t.title}
         </h1>
         <p className="text-muted-foreground mt-1">
-          Manage your project codes for Jira ticket generation.
+          {t.description}
         </p>
       </header>
       {loading ? <CodesSkeleton /> : <ProjectCodes initialProjects={projects} />}

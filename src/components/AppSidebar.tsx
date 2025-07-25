@@ -25,11 +25,33 @@ import { useAuth } from './auth/AuthProvider';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
+import { useSettings } from '@/hooks/use-settings';
+
+const translations = {
+  en: {
+    generator: 'Generator',
+    codes: 'Codes',
+    projectCodes: 'Project Codes',
+    taskCodes: 'Task Codes',
+    settings: 'Settings',
+    signOut: 'Sign Out',
+  },
+  es: {
+    generator: 'Generador',
+    codes: 'Códigos',
+    projectCodes: 'Códigos de Proyecto',
+    taskCodes: 'Códigos de Tarea',
+    settings: 'Configuración',
+    signOut: 'Cerrar Sesión',
+  }
+};
 
 export function AppSidebar({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { user, signOut } = useAuth();
+  const { settings } = useSettings();
   const isCodesRoute = pathname.startsWith('/codes');
+  const t = translations[settings.language as keyof typeof translations] || translations.en;
 
   return (
     <SidebarProvider>
@@ -43,11 +65,11 @@ export function AppSidebar({ children }: { children: ReactNode }) {
               <SidebarMenuButton
                 asChild
                 isActive={pathname === '/'}
-                tooltip={{ children: 'Generator' }}
+                tooltip={{ children: t.generator }}
               >
                 <Link href="/">
                   <Home />
-                  <span>Generator</span>
+                  <span>{t.generator}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -58,10 +80,10 @@ export function AppSidebar({ children }: { children: ReactNode }) {
                     <SidebarMenuButton
                         className="w-full"
                         isActive={isCodesRoute}
-                        tooltip={{ children: 'Codes' }}
+                        tooltip={{ children: t.codes }}
                         >
                         <Tags />
-                        <span>Codes</span>
+                        <span>{t.codes}</span>
                     </SidebarMenuButton>
                 </CollapsibleTrigger>
               </SidebarMenuItem>
@@ -70,12 +92,12 @@ export function AppSidebar({ children }: { children: ReactNode }) {
                 <SidebarMenuSub>
                   <SidebarMenuSubItem>
                     <SidebarMenuSubButton asChild isActive={pathname === '/codes' || pathname === '/codes/projects'}>
-                      <Link href="/codes/projects"><Brackets /><span>Project Codes</span></Link>
+                      <Link href="/codes/projects"><Brackets /><span>{t.projectCodes}</span></Link>
                     </SidebarMenuSubButton>
                   </SidebarMenuSubItem>
                   <SidebarMenuSubItem>
                     <SidebarMenuSubButton asChild isActive={pathname === '/codes/tasks'}>
-                      <Link href="/codes/tasks"><Code /><span>Task Codes</span></Link>
+                      <Link href="/codes/tasks"><Code /><span>{t.taskCodes}</span></Link>
                     </SidebarMenuSubButton>
                   </SidebarMenuSubItem>
                 </SidebarMenuSub>
@@ -87,11 +109,11 @@ export function AppSidebar({ children }: { children: ReactNode }) {
               <SidebarMenuButton
                 asChild
                 isActive={pathname === '/settings'}
-                tooltip={{ children: 'Settings' }}
+                tooltip={{ children: t.settings }}
               >
                 <Link href="/settings">
                   <Settings />
-                  <span>Settings</span>
+                  <span>{t.settings}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -108,7 +130,7 @@ export function AppSidebar({ children }: { children: ReactNode }) {
                     <span className="font-medium truncate">{user.displayName}</span>
                     <span className="text-muted-foreground truncate">{user.email}</span>
                 </div>
-                <Button variant="ghost" size="icon" className="ml-auto shrink-0" onClick={signOut} title="Sign Out">
+                <Button variant="ghost" size="icon" className="ml-auto shrink-0" onClick={signOut} title={t.signOut}>
                     <LogOut />
                 </Button>
               </div>
@@ -125,4 +147,3 @@ export function AppSidebar({ children }: { children: ReactNode }) {
     </SidebarProvider>
   );
 }
-
