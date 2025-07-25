@@ -175,8 +175,8 @@ export async function createJiraTickets(
     // Step 2: Create sub-tasks
     console.log(`[JIRA DEBUG] Found ${tasks.length} sub-tasks to create.`);
     for (const subtask of tasks) {
-      // Construct summary for subtask: PROJECTCODE_STORYNUMBER_TASKCODE TASKNAME
-      const subtaskSummary = `${projectKey}_${storyNumber}_${subtask.code} ${subtask.name}`;
+      // Construct summary for subtask: PROJECTCODE_STORYNUMBER_TASKTYPE TASKNAME
+      const subtaskSummary = `${projectKey}_${storyNumber}_${subtask.type} ${subtask.name}`;
 
       // Conditional description for development task
       let subtaskDescription = '';
