@@ -148,6 +148,12 @@ export async function createJiraTickets(
     });
 
     if (!storyResponse.ok) {
+       if (storyResponse.status === 401 || storyResponse.status === 403) {
+        return {
+          success: false,
+          message: 'Jira authentication failed. Check your email and API token in settings.',
+        };
+      }
       const errorData = await storyResponse.text();
       console.error('[JIRA DEBUG] Failed to create Story:', {
         status: storyResponse.status,
