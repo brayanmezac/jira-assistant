@@ -17,7 +17,7 @@ function CodesSkeleton() {
   );
 }
 
-export default function CodesPage() {
+export default function ProjectCodesPage() {
   const [projects, setProjects] = useState<ProjectCode[]>([]);
   const [loading, setLoading] = useState(true);
 

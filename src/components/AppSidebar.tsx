@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -11,8 +12,11 @@ import {
   SidebarProvider,
   SidebarTrigger,
   SidebarFooter,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
 } from '@/components/ui/sidebar';
-import { Home, Settings, Tags, LogOut } from 'lucide-react';
+import { Home, Settings, Tags, LogOut, Code, Brackets } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
@@ -20,10 +24,12 @@ import { AppLogo } from './AppLogo';
 import { useAuth } from './auth/AuthProvider';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 
 export function AppSidebar({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { user, signOut } = useAuth();
+  const isCodesRoute = pathname.startsWith('/codes');
 
   return (
     <SidebarProvider>
@@ -45,18 +51,38 @@ export function AppSidebar({ children }: { children: ReactNode }) {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname === '/codes'}
-                tooltip={{ children: 'Codes' }}
-              >
-                <Link href="/codes">
-                  <Tags />
-                  <span>Codes</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+            
+            <Collapsible defaultOpen={isCodesRoute}>
+              <SidebarMenuItem>
+                <CollapsibleTrigger asChild>
+                    <SidebarMenuButton
+                        className="w-full"
+                        isActive={isCodesRoute}
+                        tooltip={{ children: 'Codes' }}
+                        >
+                        <Tags />
+                        <span>Codes</span>
+                    </SidebarMenuButton>
+                </CollapsibleTrigger>
+              </SidebarMenuItem>
+
+              <CollapsibleContent>
+                <SidebarMenuSub>
+                  <SidebarMenuSubItem>
+                    <SidebarMenuSubButton asChild isActive={pathname === '/codes' || pathname === '/codes/projects'}>
+                      <Link href="/codes/projects"><Brackets /><span>Project Codes</span></Link>
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+                  <SidebarMenuSubItem>
+                    <SidebarMenuSubButton asChild isActive={pathname === '/codes/tasks'}>
+                      <Link href="/codes/tasks"><Code /><span>Task Codes</span></Link>
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+                </SidebarMenuSub>
+              </CollapsibleContent>
+            </Collapsible>
+
+
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
@@ -99,3 +125,4 @@ export function AppSidebar({ children }: { children: ReactNode }) {
     </SidebarProvider>
   );
 }
+
