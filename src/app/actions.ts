@@ -25,47 +25,49 @@ export type FormState = {
 };
 
 /**
- * Processes a template string, finds an <AI> tag, and replaces it with AI-generated content.
+ * Processes a template string, finding all <AI> tags and replacing them with AI-generated content.
  * @param template The template string to process.
  * @param context The user-provided context to inject into the AI prompt.
  * @returns The processed string with the AI content injected.
  */
 async function processTemplateWithAI(template: string, context: string): Promise<string> {
     const aiTagRegex = /<AI\s+([^>]+)\s*\/>/s;
-    const match = template.match(aiTagRegex);
+    let processedTemplate = template;
+    let match;
 
-    if (!match) {
-        // No AI tag found, return the template as is.
-        return template;
+    // Use a loop to find and replace all AI tags one by one
+    while ((match = processedTemplate.match(aiTagRegex)) !== null) {
+        const fullMatch = match[0];
+        const attrsString = match[1];
+
+        const getAttr = (name: string) => {
+            const regex = new RegExp(`${name}="([^"]+)"`);
+            const attrMatch = attrsString.match(regex);
+            return attrMatch ? attrMatch[1] : '';
+        };
+
+        const prompt = getAttr('prompt');
+        const system = getAttr('system');
+        
+        // Combine the prompt from the tag with the user-provided context
+        const fullPrompt = `${prompt}\n\nContexto:\n\`\`\`\n${context}\n\`\`\``;
+
+        try {
+            const aiResult = await generateText({
+                prompt: fullPrompt,
+                systemInstruction: system,
+            });
+            // Replace the current AI tag with the generated text
+            processedTemplate = processedTemplate.replace(fullMatch, aiResult.generatedText);
+        } catch (error) {
+            console.error("Error during AI tag processing:", error);
+            const errorMessage = `[AI Generation Failed: ${error instanceof Error ? error.message : 'Unknown error'}]`;
+            // Replace the tag with an error message to avoid infinite loops on failure
+            processedTemplate = processedTemplate.replace(fullMatch, errorMessage);
+        }
     }
 
-    const attrsString = match[1];
-    const getAttr = (name: string) => {
-        const regex = new RegExp(`${name}="([^"]+)"`);
-        const attrMatch = attrsString.match(regex);
-        return attrMatch ? attrMatch[1] : '';
-    };
-
-    const prompt = getAttr('prompt');
-    const system = getAttr('system');
-    
-    // Combine the prompt from the tag with the user-provided context
-    const fullPrompt = `${prompt}\n\nContexto:\n\`\`\`\n${context}\n\`\`\``;
-
-    try {
-        const aiResult = await generateText({
-            prompt: fullPrompt,
-            systemInstruction: system,
-        });
-        // Replace the AI tag with the generated text
-        return template.replace(aiTagRegex, aiResult.generatedText);
-    } catch (error) {
-        console.error("Error during AI tag processing:", error);
-        // In case of an error, we can return the template with an error message,
-        // or just the original template. Returning with an error is more informative.
-        const errorMessage = `[AI Generation Failed: ${error instanceof Error ? error.message : 'Unknown error'}]`;
-        return template.replace(aiTagRegex, errorMessage);
-    }
+    return processedTemplate;
 }
 
 
@@ -132,11 +134,11 @@ export async function generateJiraTicketsAction(
 
 const createJiraTicketsInput = z.object({
   storySummary: z.string(),
-  storyNumber: z.number(), // Added story number for subtask title construction
+  storyNumber: z.number(),
   storyDescription: z.string(),
   projectKey: z.string(),
   settings: jiraSettingsSchema,
-  tasks: z.array(z.any()), // Pass tasks to create
+  tasks: z.array(z.any()),
 });
 
 type CreateJiraTicketsInput = z.infer<typeof createJiraTicketsInput>;
@@ -229,17 +231,16 @@ export async function createJiraTickets(
     // Step 2: Create sub-tasks
     console.log(`[JIRA DEBUG] Found ${tasks.length} sub-tasks to create.`);
     for (const subtask of tasks) {
-      // Construct summary for subtask: PROJECTCODE_STORYNUMBER_TASKTYPE TASKNAME
       const subtaskSummary = `${projectKey}_${storyNumber}_${subtask.type} ${subtask.name}`;
 
       // Conditional description for development task
       let subtaskDescription = '';
-      if (subtask.code === '10465') { // Assuming '10465' is the ID for "Desarrollo"
+      if (subtask.type.startsWith('TDEV')) { // Check if it's a development task by its type prefix
         subtaskDescription = `h2. *Datos de la KB*
 
-* *Nombre:* ${subtaskSummary}
+* *Nombre:* ${storySummary}
 * *Genexus:* GX 17 U13
-* *Info:* [Datos KB](https://link.com)
+* *Info:* [Datos KB|https://link.com]
 
 
 ***
@@ -253,10 +254,10 @@ Se adjunta estimador:`;
       const subtaskPayload = {
         fields: {
           project: { key: projectKey },
-          summary: subtaskSummary, // Use the constructed summary
+          summary: subtaskSummary,
           description: subtaskDescription,
-          issuetype: { id: subtask.code }, // Use the ID from task config
-          parent: { key: storyKey }, // Link to the main story created above
+          issuetype: { id: subtask.code },
+          parent: { key: storyKey },
         },
       };
 
@@ -270,7 +271,6 @@ Se adjunta estimador:`;
       if (!subtaskResponse.ok) {
         const errorData = await subtaskResponse.text();
         console.warn(`[JIRA WARN] Failed to create subtask "${subtask.name}": ${errorData}`);
-        // Decide if you want to stop or continue. For now, we continue.
       }
     }
     console.log('[JIRA DEBUG] Sub-task creation process finished.');
@@ -497,3 +497,5 @@ export async function getJiraIssueTypes(
     };
   }
 }
+
+    
