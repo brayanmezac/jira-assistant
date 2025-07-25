@@ -31,6 +31,7 @@ import { jiraSettingsSchema } from '@/lib/types';
 import { Separator } from '../ui/separator';
 import { Skeleton } from '../ui/skeleton';
 import { Loader2 } from 'lucide-react';
+import { useTheme } from 'next-themes';
 
 function SettingsFormSkeleton() {
     return (
@@ -68,6 +69,7 @@ function SettingsFormSkeleton() {
 
 export function SettingsForm() {
   const { settings, setSettings, loading: isLoadingSettings } = useSettings();
+  const { setTheme } = useTheme();
   const { toast } = useToast();
   const [issueTypes, setIssueTypes] = useState<JiraApiIssueType[]>([]);
   const [loadingIssueTypes, setLoadingIssueTypes] = useState(false);
@@ -81,8 +83,10 @@ export function SettingsForm() {
   useEffect(() => {
     if (!isLoadingSettings) {
       form.reset(settings);
+      // Also apply the loaded theme
+      setTheme(settings.theme || 'system');
     }
-  }, [settings, isLoadingSettings, form]);
+  }, [settings, isLoadingSettings, form, setTheme]);
 
   // Effect to fetch Jira issue types when connection details change and are valid
   useEffect(() => {
@@ -116,6 +120,8 @@ export function SettingsForm() {
 
   const onSubmit = async (values: z.infer<typeof jiraSettingsSchema>) => {
     await setSettings(values);
+    // Apply the theme immediately upon saving
+    setTheme(values.theme);
     toast({
       title: '✅ Settings Saved',
       description: 'Your Jira configuration has been saved to your account.',
@@ -132,6 +138,9 @@ export function SettingsForm() {
         onSubmit={form.handleSubmit(onSubmit)}
         className="space-y-6 max-w-lg"
       >
+        <div className="space-y-2">
+            <h3 className="text-lg font-medium">Jira Connection</h3>
+        </div>
         <FormField
           control={form.control}
           name="url"
@@ -240,6 +249,57 @@ export function SettingsForm() {
             </FormItem>
           )}
         />
+        <Separator />
+         <div className="space-y-2">
+            <h3 className="text-lg font-medium">Appearance</h3>
+         </div>
+        <FormField
+          control={form.control}
+          name="language"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Language</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a language" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                    <SelectItem value="en">English</SelectItem>
+                    <SelectItem value="es">Español</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="theme"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Theme</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a theme" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                    <SelectItem value="light">Light</SelectItem>
+                    <SelectItem value="dark">Dark</SelectItem>
+                    <SelectItem value="system">System</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormDescription>
+                The System theme will match your browser's preference.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <Button type="submit" disabled={form.formState.isSubmitting}>
             {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Save Settings

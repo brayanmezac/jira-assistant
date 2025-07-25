@@ -3,6 +3,7 @@ import './globals.css';
 import { AppSidebar } from '@/components/AppSidebar';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/components/auth/AuthProvider';
+import { ThemeProvider } from '@/components/theme/ThemeProvider';
 
 export const metadata: Metadata = {
   title: 'Jira Assist',
@@ -29,10 +30,17 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <AuthProvider>
-          <AppSidebar>{children}</AppSidebar>
-          <Toaster />
-        </AuthProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <AuthProvider>
+            <AppSidebar>{children}</AppSidebar>
+            <Toaster />
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

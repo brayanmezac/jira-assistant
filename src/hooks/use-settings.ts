@@ -12,6 +12,8 @@ const defaultSettings: JiraSettings = {
     token: '',
     epicIssueTypeId: '',
     storyIssueTypeId: '',
+    language: 'en',
+    theme: 'system',
 };
 
 export function useSettings() {

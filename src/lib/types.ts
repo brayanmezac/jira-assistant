@@ -13,6 +13,8 @@ export const jiraSettingsSchema = z.object({
   token: z.string().optional().default(''),
   epicIssueTypeId: z.string().default(''),
   storyIssueTypeId: z.string().default(''),
+  language: z.string().default('en'),
+  theme: z.string().default('system'),
 });
 export type JiraSettings = z.infer<typeof jiraSettingsSchema>;
 
