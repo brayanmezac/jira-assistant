@@ -8,7 +8,5 @@ export const ai = genkit({
   // In a real app, you would configure plugins like this:
   // plugins: [googleAI({apiKey: process.env.GEMINI_API_KEY})],
   // For now, we leave it empty to avoid authentication errors.
-  plugins: [],
+  plugins: [googleAI()],
 });
-
-    
