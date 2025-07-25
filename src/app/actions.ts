@@ -6,17 +6,20 @@ import {
   jiraStoryFormSchema,
   jiraSettingsSchema,
   jiraIssueTypeSchema,
+  type TaskCode,
 } from '@/lib/types';
 import { getTaskCodes, getProjectCodes } from '@/lib/firebase';
+import { generateJiraContent } from '@/ai/flows/generate-jira-story';
 
 export type FormState = {
   success: boolean;
   message: string;
   data?: {
-    epic: string;
-    story: string;
+    storyDescription: string;
     storyName: string;
     projectKey: string;
+    storyNumber: number;
+    tasks: TaskCode[];
   };
 };
 
@@ -38,7 +41,7 @@ export async function generateJiraTicketsAction(
     };
   }
 
-  const { name, description, project } = validatedFields.data;
+  const { name, description, project, number } = validatedFields.data;
 
   try {
     const projects = await getProjectCodes();
@@ -53,36 +56,50 @@ export async function generateJiraTicketsAction(
 
     const projectKey = projectInfo.code;
     
-    // Use the user-provided description directly for both epic and story
-    const epicDescription = description;
-    const storyDescription = description;
+    // For now, we will use the AI to generate the story description.
+    // The epic description is generated but not used in the final ticket creation logic for now.
+    const aiResult = await generateJiraContent({
+        storyDescription: description,
+        storyName: name,
+        projectCode: projectKey,
+        numero: number
+    });
+
+    const subtasks = await getTaskCodes();
 
     return {
       success: true,
       message: 'Content ready for Jira.',
       data: {
-        epic: epicDescription,
-        story: storyDescription,
+        storyDescription: aiResult.storyDescription, // This is the detailed one for the dev sub-task
         storyName: name,
         projectKey: projectKey,
+        storyNumber: number,
+        tasks: subtasks,
       },
     };
   } catch (error: any) {
     console.error('Error in generateJiraTicketsAction:', error);
+    // Check for specific AI-related authentication errors
+    if (error.message && (error.message.includes('permission') || error.message.includes('authentication'))) {
+       return {
+        success: false,
+        message: `AI generation failed due to an authentication or permission error. Please check your Genkit/AI service configuration. Details: ${error.message}`,
+      };
+    }
     return {
       success: false,
-      message: `An error occurred while preparing the Jira tickets. Please try again. (Details: ${error.message})`,
+      message: `An error occurred while generating the Jira tickets. Please try again. (Details: ${error.message})`,
     };
   }
 }
 
 const createJiraTicketsInput = z.object({
-  epicSummary: z.string(),
-  epicDescription: z.string(),
   storySummary: z.string(),
   storyDescription: z.string(),
   projectKey: z.string(),
   settings: jiraSettingsSchema,
+  tasks: z.array(z.any()), // Pass tasks to create
 });
 
 type CreateJiraTicketsInput = z.infer<typeof createJiraTicketsInput>;
@@ -91,27 +108,21 @@ type JiraResult = {
   success: boolean;
   message: string;
   data?: {
-    epicKey: string;
+    storyKey: string;
   };
 };
 
 export async function createJiraTickets(
   input: CreateJiraTicketsInput
 ): Promise<JiraResult> {
-  console.log('[JIRA DEBUG] Received data for ticket creation:', {
-    ...input,
-    settings: { ...input.settings, token: 'REDACTED' },
-  });
-
   const {
-    epicSummary,
-    epicDescription,
     storySummary,
     storyDescription,
     projectKey,
     settings,
+    tasks
   } = input;
-  const { url, email, token, epicIssueTypeId, storyIssueTypeId } = settings;
+  const { url, email, token, storyIssueTypeId } = settings;
 
   if (!url || !email || !token) {
     return {
@@ -119,10 +130,10 @@ export async function createJiraTickets(
       message: 'Jira connection settings are incomplete. Please check your settings.',
     };
   }
-   if (!epicIssueTypeId || !storyIssueTypeId) {
+   if (!storyIssueTypeId) {
     return {
         success: false,
-        message: 'Epic or Story issue type is not configured in Settings. Please select them and save.'
+        message: 'Story issue type is not configured in Settings. Please select it and save.'
     }
    }
 
@@ -134,50 +145,13 @@ export async function createJiraTickets(
   };
 
   try {
-    const epicPayload = {
-      fields: {
-        project: { key: projectKey },
-        summary: epicSummary,
-        description: epicDescription,
-        issuetype: { id: epicIssueTypeId },
-        customfield_10011: epicSummary, // Note: This is often the "Epic Name" field
-      },
-    };
-
-    console.log(
-      '[JIRA DEBUG] Creating Epic with payload:',
-      JSON.stringify(epicPayload, null, 2)
-    );
-    const epicResponse = await fetch(`${url}/rest/api/2/issue`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(epicPayload),
-    });
-
-    if (!epicResponse.ok) {
-      const errorData = await epicResponse.text();
-      console.error('[JIRA DEBUG] Failed to create Epic:', {
-        status: epicResponse.status,
-        statusText: epicResponse.statusText,
-        data: errorData,
-      });
-      return {
-        success: false,
-        message: `Failed to create Epic: ${epicResponse.statusText}. ${errorData}`,
-      };
-    }
-
-    const epicData = await epicResponse.json();
-    const epicKey = epicData.key;
-    console.log('[JIRA DEBUG] Epic created successfully:', epicData);
-
+    // Step 1: Create the main story
     const storyPayload = {
       fields: {
         project: { key: projectKey },
         summary: storySummary,
-        description: storyDescription,
+        description: storyDescription, // Using the more detailed story description for the main story
         issuetype: { id: storyIssueTypeId },
-        customfield_10014: epicKey, // Note: This is often the "Epic Link" field
       },
     };
 
@@ -208,15 +182,37 @@ export async function createJiraTickets(
     const storyKey = storyData.key;
     console.log('[JIRA DEBUG] Story created successfully:', storyData);
 
-    const subtaskList = await getTaskCodes();
-    console.log(`[JIRA DEBUG] Found ${subtaskList.length} sub-tasks to create.`);
-    for (const subtask of subtaskList) {
+    // Step 2: Create sub-tasks
+    console.log(`[JIRA DEBUG] Found ${tasks.length} sub-tasks to create.`);
+    for (const subtask of tasks) {
+      // Construct summary for subtask: PROJECTCODE_STORYNUMBER_TASKCODE TASKNAME
+      const subtaskSummary = `${projectKey}_${input.storySummary.split(' - ')[0].split('_')[1]}_${subtask.code} ${subtask.name}`;
+
+      // Conditional description for development task
+      let subtaskDescription = '';
+      if (subtask.code === '10465') { // Assuming '10465' is the ID for "Desarrollo"
+        subtaskDescription = `h2. *Datos de la KB*
+
+* *Nombre:* ${subtaskSummary}
+* *Genexus:* GX 17 U13
+* *Info:* [Datos KB](https://link.com)
+
+
+***
+
+${storyDescription}
+
+Se adjunta estimador:`;
+      }
+
+
       const subtaskPayload = {
         fields: {
           project: { key: projectKey },
-          summary: subtask.name,
-          issuetype: { id: subtask.code },
-          parent: { key: storyKey },
+          summary: subtask.name, // The n8n flow uses a constructed name, but simple name is cleaner
+          description: subtaskDescription,
+          issuetype: { id: subtask.code }, // Use the ID from task config
+          parent: { key: storyKey }, // Link to the main story created above
         },
       };
 
@@ -238,7 +234,7 @@ export async function createJiraTickets(
     return {
       success: true,
       message: 'Tickets created successfully!',
-      data: { epicKey },
+      data: { storyKey },
     };
   } catch (error: any) {
     console.error(

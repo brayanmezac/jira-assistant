@@ -3,18 +3,19 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CheckCircle, Clipboard, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { SubtasksPreview } from './SubtasksPreview';
 import { useSettings } from '@/hooks/use-settings';
 import { createJiraTickets } from '@/app/actions';
+import type { TaskCode } from '@/lib/types';
 
 type GeneratedContentProps = {
-  epic: string;
-  story: string;
+  storyDescription: string;
   storyName: string;
   projectKey: string;
+  storyNumber: number;
+  tasks: TaskCode[];
 };
 
 function ContentDisplay({ content }: { content: string }) {
@@ -44,14 +45,13 @@ function ContentDisplay({ content }: { content: string }) {
   );
 }
 
-export function GeneratedContent({ epic, story, storyName, projectKey }: GeneratedContentProps) {
+export function GeneratedContent({ storyDescription, storyName, projectKey, storyNumber, tasks }: GeneratedContentProps) {
   const { toast } = useToast();
   const [isCreating, setIsCreating] = useState(false);
   const { settings } = useSettings();
   
   const handleCreateInJira = async () => {
     setIsCreating(true);
-    console.log("Attempting to create Jira tickets with projectKey:", projectKey);
     
     if (!settings.url || !settings.email || !settings.token) {
         toast({
@@ -62,34 +62,36 @@ export function GeneratedContent({ epic, story, storyName, projectKey }: Generat
         setIsCreating(false);
         return;
     }
+
+    const storySummary = `${projectKey}_${storyNumber} - ${storyName}`;
     
     try {
         const result = await createJiraTickets({
-            epicSummary: storyName,
-            epicDescription: epic,
-            storySummary: storyName,
-            storyDescription: story,
+            storySummary: storySummary,
+            storyDescription: storyDescription,
             projectKey: projectKey,
             settings: settings,
+            tasks: tasks
         });
 
         if (result.success && result.data) {
-            const epicUrl = `${settings.url}/browse/${result.data.epicKey}`;
+            const storyUrl = `${settings.url}/browse/${result.data.storyKey}`;
             toast({
               title: "✅ Success!",
               description: (
                 <p>
                   Jira tickets created successfully. {' '}
                   <a 
-                    href={epicUrl} 
+                    href={storyUrl} 
                     target="_blank"
                     rel="noopener noreferrer"
                     className="underline font-medium"
                   >
-                    View Epic on Jira
+                    View Story on Jira
                   </a>
                 </p>
               ),
+              duration: 10000,
             });
         } else {
             toast({
@@ -113,38 +115,17 @@ export function GeneratedContent({ epic, story, storyName, projectKey }: Generat
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
       <div className="lg:col-span-2">
-        <Tabs defaultValue="epic">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="epic">Epic</TabsTrigger>
-            <TabsTrigger value="story">Development Story</TabsTrigger>
-          </TabsList>
-          <TabsContent value="epic">
-            <Card>
-              <CardHeader>
-                <CardTitle>Generated Epic</CardTitle>
-                <CardDescription>
-                  This is the AI-generated epic for your feature.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ContentDisplay content={epic} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-          <TabsContent value="story">
-            <Card>
-              <CardHeader>
-                <CardTitle>Generated Development Story</CardTitle>
-                <CardDescription>
-                  This is the detailed, AI-generated technical story.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ContentDisplay content={story} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+         <Card>
+            <CardHeader>
+            <CardTitle>Generated Development Story</CardTitle>
+            <CardDescription>
+                This is the detailed, AI-generated technical story for the main development sub-task.
+            </CardDescription>
+            </CardHeader>
+            <CardContent>
+            <ContentDisplay content={storyDescription} />
+            </CardContent>
+        </Card>
       </div>
       <div className="lg:col-span-1">
         <SubtasksPreview />
