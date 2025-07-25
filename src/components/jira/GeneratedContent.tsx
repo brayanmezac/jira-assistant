@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -117,9 +118,9 @@ export function GeneratedContent({ storyDescription, storyName, projectKey, stor
       <div className="lg:col-span-2">
          <Card>
             <CardHeader>
-            <CardTitle>Generated Development Story</CardTitle>
+            <CardTitle>Development Story Content</CardTitle>
             <CardDescription>
-                This is the detailed, AI-generated technical story for the main development sub-task.
+                This is the content that will be used for the main development sub-task.
             </CardDescription>
             </CardHeader>
             <CardContent>
@@ -153,3 +154,5 @@ export function GeneratedContent({ storyDescription, storyName, projectKey, stor
     </div>
   );
 }
+
+    

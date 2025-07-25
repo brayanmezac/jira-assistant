@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -27,7 +28,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription }
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { SubmitButton } from '../SubmitButton';
-import { Bot } from 'lucide-react';
+import { Bot, PencilLine } from 'lucide-react';
 
 type GeneratorFormProps = {
   formAction: (payload: FormData) => void;
@@ -62,7 +63,7 @@ export function GeneratorForm({ formAction, initialState }: GeneratorFormProps) 
         <Card>
           <CardHeader>
             <CardTitle>Create New Story</CardTitle>
-            <CardDescription>Fill in the details below to generate a new Jira story and epic with AI.</CardDescription>
+            <CardDescription>Fill in the details below to generate a new Jira story and subtasks.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-6">
             <FormField
@@ -136,7 +137,7 @@ export function GeneratorForm({ formAction, initialState }: GeneratorFormProps) 
                     />
                   </FormControl>
                   <FormDescription>
-                    This is the context the AI will use to generate the tickets. Be as detailed as possible.
+                    This content will be used as the main description for the story and development sub-task.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -144,9 +145,9 @@ export function GeneratorForm({ formAction, initialState }: GeneratorFormProps) 
             />
           </CardContent>
           <CardFooter>
-            <SubmitButton loadingText="Generating...">
-                <Bot className="mr-2"/>
-                Generate with AI
+            <SubmitButton loadingText="Preparing...">
+                <PencilLine className="mr-2"/>
+                Prepare for Jira
             </SubmitButton>
           </CardFooter>
         </Card>
@@ -154,3 +155,5 @@ export function GeneratorForm({ formAction, initialState }: GeneratorFormProps) 
     </Form>
   );
 }
+
+    

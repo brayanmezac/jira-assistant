@@ -9,7 +9,6 @@ import {
   type TaskCode,
 } from '@/lib/types';
 import { getTaskCodes, getProjectCodes } from '@/lib/firebase';
-import { generateJiraContent } from '@/ai/flows/generate-jira-story';
 
 export type FormState = {
   success: boolean;
@@ -55,23 +54,13 @@ export async function generateJiraTicketsAction(
     }
 
     const projectKey = projectInfo.code;
-    
-    // For now, we will use the AI to generate the story description.
-    // The epic description is generated but not used in the final ticket creation logic for now.
-    const aiResult = await generateJiraContent({
-        storyDescription: description,
-        storyName: name,
-        projectCode: projectKey,
-        numero: number
-    });
-
     const subtasks = await getTaskCodes();
 
     return {
       success: true,
       message: 'Content ready for Jira.',
       data: {
-        storyDescription: aiResult.storyDescription, // This is the detailed one for the dev sub-task
+        storyDescription: description, // Use the user-provided description directly
         storyName: name,
         projectKey: projectKey,
         storyNumber: number,
@@ -80,16 +69,9 @@ export async function generateJiraTicketsAction(
     };
   } catch (error: any) {
     console.error('Error in generateJiraTicketsAction:', error);
-    // Check for specific AI-related authentication errors
-    if (error.message && (error.message.includes('permission') || error.message.includes('authentication'))) {
-       return {
-        success: false,
-        message: `AI generation failed due to an authentication or permission error. Please check your Genkit/AI service configuration. Details: ${error.message}`,
-      };
-    }
     return {
       success: false,
-      message: `An error occurred while generating the Jira tickets. Please try again. (Details: ${error.message})`,
+      message: `An error occurred while preparing the Jira tickets. Please try again. (Details: ${error.message})`,
     };
   }
 }
@@ -453,3 +435,5 @@ export async function getJiraIssueTypes(
     };
   }
 }
+
+    

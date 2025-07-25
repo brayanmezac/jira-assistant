@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useActionState } from 'react';
@@ -45,10 +46,12 @@ export function JiraGenerator() {
       ) : !state.success && state.message ? (
          <Alert variant="destructive" className="mt-8">
             <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Generation Failed</AlertTitle>
+            <AlertTitle>Preparation Failed</AlertTitle>
             <AlertDescription>{state.message}</AlertDescription>
          </Alert>
       ) : null}
     </div>
   );
 }
+
+    
