@@ -125,6 +125,19 @@ export async function generateJiraTicketsAction(
       (!task.projectIds || task.projectIds.length === 0 || task.projectIds.includes(projectInfo.id))
     );
 
+    // Sanitize tasks for serialization before sending to the client
+    const sanitizedTasks: TaskCode[] = relevantTasks.map(task => ({
+        id: task.id,
+        userId: task.userId,
+        code: task.code,
+        name: task.name,
+        type: task.type,
+        iconUrl: task.iconUrl || '',
+        status: task.status,
+        projectIds: task.projectIds || [],
+        template: task.template || '',
+    }));
+
 
     return {
       success: true,
@@ -134,7 +147,7 @@ export async function generateJiraTicketsAction(
         storyName: name,
         projectKey: projectKey,
         storyNumber: number,
-        tasks: relevantTasks,
+        tasks: sanitizedTasks,
       },
     };
   } catch (error: any) {
