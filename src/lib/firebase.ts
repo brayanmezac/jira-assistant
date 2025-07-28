@@ -1,3 +1,4 @@
+
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore, collection, getDocs, doc, addDoc, updateDoc, deleteDoc, type DocumentData, type WithFieldValue, setDoc, getDoc, query, where } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
@@ -77,6 +78,15 @@ export async function getTaskCodes(userId: string): Promise<TaskCode[]> {
     const q = query(collection(db, 'taskCodes'), where('userId', '==', userId));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => docToTyped<TaskCode>(doc));
+}
+
+export async function getTaskCode(id: string): Promise<TaskCode | null> {
+    const docRef = doc(db, 'taskCodes', id);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+        return docToTyped<TaskCode>(docSnap);
+    }
+    return null;
 }
 
 export async function addTaskCode(taskData: WithFieldValue<Omit<TaskCode, 'id'>>): Promise<TaskCode> {

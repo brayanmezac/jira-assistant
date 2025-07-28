@@ -1,8 +1,9 @@
+
 import { z } from 'zod';
 
 export const jiraStoryFormSchema = z.object({
   name: z.string().min(3, { message: 'Story name must be at least 3 characters.' }),
-  description: z.string(),
+  description: z.string(), // This is the AI context. Can be empty.
   number: z.coerce.number().int().positive({ message: 'Story number must be a positive number.' }),
   project: z.string().nonempty({ message: 'Please select a project.' }),
   userId: z.string().nonempty({ message: 'User ID is required.' }),
@@ -36,6 +37,7 @@ export const taskCodeSchema = z.object({
   iconUrl: z.string().url().or(z.literal('')).default(''),
   status: z.enum(['active', 'inactive']).default('active'),
   projectIds: z.array(z.string()).optional().default([]), // Empty array means "General"
+  template: z.string().optional(), // Added template field
 });
 export type TaskCode = z.infer<typeof taskCodeSchema> & { id: string };
 

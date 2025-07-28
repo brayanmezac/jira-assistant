@@ -3,6 +3,7 @@
 
 import { useRef, useState, useMemo } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import {
   Card,
   CardContent,
@@ -15,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Pencil, Trash2, Download, Upload, MoreVertical, Power, PowerOff, Check, ChevronsUpDown, Search, Badge } from 'lucide-react';
+import { Loader2, Pencil, Trash2, Download, Upload, MoreVertical, Power, PowerOff, Check, ChevronsUpDown, Search, FileText } from 'lucide-react';
 import type { TaskCode, ProjectCode } from '@/lib/types';
 import {
   Table,
@@ -56,16 +57,15 @@ import {
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
-    DropdownMenuCheckboxItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator
- } from '../ui/dropdown-menu';
+} from '../ui/dropdown-menu';
  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { z } from 'zod';
 import { useAuth } from '../auth/AuthProvider';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
 import { cn } from '@/lib/utils';
+import { Badge } from '../ui/badge';
+
 
 const translations = {
     en: {
@@ -99,9 +99,12 @@ const translations = {
         tableName: 'Name',
         tableType: 'Type',
         tableCode: 'Code (ID)',
-        tableStatus: 'Status',
         tableProjects: 'Projects',
         tableActions: 'Actions',
+        editTemplate: 'Edit Template',
+        editTask: 'Edit Task',
+        deleteTask: 'Delete Task',
+        toggleStatus: 'Toggle Status',
         editDialogTitle: 'Edit Task Code',
         editDialogDescription: "Make changes to your task here. Click save when you're done.",
         cancel: 'Cancel',
@@ -155,9 +158,12 @@ const translations = {
         tableName: 'Nombre',
         tableType: 'Tipo',
         tableCode: 'Código (ID)',
-        tableStatus: 'Estado',
         tableProjects: 'Proyectos',
         tableActions: 'Acciones',
+        editTemplate: 'Editar Plantilla',
+        editTask: 'Editar Tarea',
+        deleteTask: 'Eliminar Tarea',
+        toggleStatus: 'Activar/Desactivar',
         editDialogTitle: 'Editar Código de Tarea',
         editDialogDescription: 'Haz cambios a tu tarea aquí. Haz clic en guardar cuando termines.',
         cancel: 'Cancelar',
@@ -434,6 +440,7 @@ export function TaskCodes({ initialTasks, userProjects }: { initialTasks: TaskCo
       type: formData.get('type') as string,
       projectIds: editingProjectIds,
       status: 'active' as 'active' | 'inactive',
+      template: '', // Add template field
     };
 
     const validatedFields = taskCodeSchema.omit({iconUrl: true}).safeParse(newTaskData);
@@ -473,7 +480,7 @@ export function TaskCodes({ initialTasks, userProjects }: { initialTasks: TaskCo
       userId: user.uid
     };
     
-    const validatedFields = taskCodeSchema.omit({ iconUrl: true, status: true }).safeParse(updatedData);
+    const validatedFields = taskCodeSchema.omit({ iconUrl: true, status: true, template: true }).safeParse(updatedData);
     if (!validatedFields.success) {
         toast({ variant: 'destructive', title: '❌ Error', description: validatedFields.error.errors.map(e => e.message).join(', ') });
         setLoading(false);
@@ -671,8 +678,7 @@ export function TaskCodes({ initialTasks, userProjects }: { initialTasks: TaskCo
                     <TableHead>{t.tableType}</TableHead>
                     <TableHead>{t.tableCode}</TableHead>
                     <TableHead>{t.tableProjects}</TableHead>
-                    <TableHead>{t.tableStatus}</TableHead>
-                    <TableHead className="text-right w-[120px]">{t.tableActions}</TableHead>
+                    <TableHead className="text-right w-[160px]">{t.tableActions}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -694,18 +700,21 @@ export function TaskCodes({ initialTasks, userProjects }: { initialTasks: TaskCo
                             </div>
                         ) : (<Badge variant="outline">{t.general}</Badge>)}
                       </TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="icon" className='h-8 w-8' onClick={() => handleToggleStatus(task)}>
+                      <TableCell className="text-right space-x-1">
+                        <Button variant="ghost" size="icon" className='h-8 w-8' onClick={() => handleToggleStatus(task)} title={t.toggleStatus}>
                             {task.status === 'active' ? <Power className='h-4 w-4 text-green-500'/> : <PowerOff className='h-4 w-4 text-red-500'/>}
                         </Button>
-                      </TableCell>
-                      <TableCell className="text-right space-x-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" asChild title={t.editTemplate}>
+                            <Link href={`/codes/tasks/${task.id}/template`}>
+                                <FileText className="h-4 w-4" />
+                            </Link>
+                        </Button>
                         <Dialog
                           open={editingTask?.id === task.id}
                           onOpenChange={(isOpen) => { if (!isOpen) setEditingTask(null); }}
                         >
                           <DialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(task)}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(task)} title={t.editTask}>
                               <Pencil className="h-4 w-4" />
                             </Button>
                           </DialogTrigger>
@@ -745,7 +754,7 @@ export function TaskCodes({ initialTasks, userProjects }: { initialTasks: TaskCo
                         </Dialog>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive" title={t.deleteTask}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </AlertDialogTrigger>

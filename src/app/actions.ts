@@ -25,17 +25,23 @@ export type FormState = {
 
 /**
  * Processes a template string, finding all <AI> tags and replacing them with AI-generated content.
+ * If the context is empty, it removes the AI tags instead of calling the AI.
  * @param template The template string to process.
- * @param context The user-provided context to inject into the AI prompt.
- * @returns The processed string with the AI content injected.
+ * @param context The user-provided context to inject into the AI prompt. Can be empty.
+ * @returns The processed string with the AI content injected or tags removed.
  */
 async function processTemplateWithAI(template: string, context: string): Promise<string> {
-    const aiTagRegex = /<AI\s+([^>]+)\s*\/>/s;
-    let processedTemplate = template;
-    let match;
+    const aiTagRegex = /<AI\s+([^>]+)\s*\/>/gs; // Use 's' and 'g' flags
 
-    // Use a loop to find and replace all AI tags one by one
-    while ((match = processedTemplate.match(aiTagRegex)) !== null) {
+    if (!context.trim()) {
+        // If context is empty, just remove all AI tags
+        return template.replace(aiTagRegex, '');
+    }
+
+    let processedTemplate = template;
+    const matches = Array.from(template.matchAll(aiTagRegex));
+
+    for (const match of matches) {
         const fullMatch = match[0];
         const attrsString = match[1];
 
@@ -153,6 +159,7 @@ const createJiraTicketsInput = z.object({
   projectKey: z.string(),
   settings: jiraSettingsSchema,
   tasks: z.array(z.any()),
+  aiContext: z.string(), // Added AI context to be passed down
 });
 
 type CreateJiraTicketsInput = z.infer<typeof createJiraTicketsInput>;
@@ -174,7 +181,8 @@ export async function createJiraTickets(
     storyDescription,
     projectKey,
     settings,
-    tasks
+    tasks,
+    aiContext,
   } = input;
   const { url, email, token, storyIssueTypeId } = settings;
 
@@ -241,8 +249,12 @@ export async function createJiraTickets(
       const subtaskSummary = `${projectKey}_${storyNumber}_${subtask.type} ${subtask.name}`;
 
       let subtaskDescription = '';
-      // Only add the specific KB description for tasks that are of type development (TDEV)
-      if (subtask.type.toLowerCase().includes('tdev')) { 
+
+      if (subtask.template) {
+        // If the task has a template, process it
+        subtaskDescription = await processTemplateWithAI(subtask.template, aiContext);
+      } else if (subtask.type.toLowerCase().includes('tdev')) { 
+        // Fallback for the old hardcoded 'TDEV' logic
         subtaskDescription = `h2. *Datos de la KB*
 
 * *Nombre:* ${storySummary}

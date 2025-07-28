@@ -10,6 +10,7 @@ import { SubtasksPreview } from './SubtasksPreview';
 import { useSettings } from '@/hooks/use-settings';
 import { createJiraTickets } from '@/app/actions';
 import type { TaskCode } from '@/lib/types';
+import { useFormContext } from 'react-hook-form';
 
 type GeneratedContentProps = {
   storyDescription: string;
@@ -17,6 +18,7 @@ type GeneratedContentProps = {
   projectKey: string;
   storyNumber: number;
   tasks: TaskCode[];
+  aiContext: string;
 };
 
 const translations = {
@@ -85,7 +87,7 @@ function ContentDisplay({ content }: { content: string }) {
   );
 }
 
-export function GeneratedContent({ storyDescription, storyName, projectKey, storyNumber, tasks }: GeneratedContentProps) {
+export function GeneratedContent({ storyDescription, storyName, projectKey, storyNumber, tasks, aiContext }: GeneratedContentProps) {
   const { toast } = useToast();
   const [isCreating, setIsCreating] = useState(false);
   const { settings } = useSettings();
@@ -113,7 +115,8 @@ export function GeneratedContent({ storyDescription, storyName, projectKey, stor
             storyDescription: storyDescription,
             projectKey: projectKey,
             settings: settings,
-            tasks: tasks
+            tasks: tasks,
+            aiContext: aiContext,
         });
 
         if (result.success && result.data) {
@@ -170,7 +173,7 @@ export function GeneratedContent({ storyDescription, storyName, projectKey, stor
         </Card>
       </div>
       <div className="lg:col-span-1">
-        <SubtasksPreview tasks={tasks} />
+        <SubtasksPreview tasks={tasks || []} />
         <Card className="mt-8">
           <CardHeader>
             <CardTitle>{t.finalStep}</CardTitle>
