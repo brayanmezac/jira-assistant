@@ -93,13 +93,22 @@ export function GeneratorForm({ formAction, initialState }: GeneratorFormProps) 
       description: '',
       number: '' as any, // Changed from undefined to empty string
       project: '',
+      userId: user?.uid || '',
     },
     context: initialState,
   });
 
+  // Sync userId to form if it changes
+  useEffect(() => {
+    if (user) {
+        form.setValue('userId', user.uid);
+    }
+  }, [user, form]);
+
   return (
     <Form {...form}>
       <form action={formAction}>
+        <input type="hidden" {...form.register('userId')} />
         <Card>
           <CardHeader>
             <CardTitle>{t.cardTitle}</CardTitle>

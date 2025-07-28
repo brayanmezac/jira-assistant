@@ -5,6 +5,7 @@ export const jiraStoryFormSchema = z.object({
   description: z.string(),
   number: z.coerce.number().int().positive({ message: 'Story number must be a positive number.' }),
   project: z.string().nonempty({ message: 'Please select a project.' }),
+  userId: z.string().nonempty({ message: 'User ID is required.' }),
 });
 
 export const jiraSettingsSchema = z.object({

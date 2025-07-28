@@ -10,8 +10,6 @@ import {
 } from '@/lib/types';
 import { getTaskCodes, getProjectCodes, getProjectCode } from '@/lib/firebase';
 import { generateText } from '@/ai/flows/generic-text-generation';
-import { auth } from '@/lib/firebase';
-
 
 export type FormState = {
   success: boolean;
@@ -81,6 +79,7 @@ export async function generateJiraTicketsAction(
     description: formData.get('description'),
     number: Number(formData.get('number')),
     project: formData.get('project'),
+    userId: formData.get('userId'),
   });
 
   if (!validatedFields.success) {
@@ -90,15 +89,14 @@ export async function generateJiraTicketsAction(
     };
   }
   
-  const userId = auth.currentUser?.uid;
+  const { name, description, project, number, userId } = validatedFields.data;
+
   if (!userId) {
     return {
         success: false,
         message: 'User not authenticated.',
     };
   }
-
-  const { name, description, project, number } = validatedFields.data;
 
   try {
     const projects = await getProjectCodes(userId);
@@ -243,7 +241,8 @@ export async function createJiraTickets(
       const subtaskSummary = `${projectKey}_${storyNumber}_${subtask.type} ${subtask.name}`;
 
       let subtaskDescription = '';
-      if (subtask.type.startsWith('TDEV')) { 
+      // Only add the specific KB description for tasks that are of type development (TDEV)
+      if (subtask.type.toLowerCase().includes('tdev')) { 
         subtaskDescription = `h2. *Datos de la KB*
 
 * *Nombre:* ${storySummary}
