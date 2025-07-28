@@ -41,7 +41,15 @@ export async function generateText(input: GenericTextGenerationInput): Promise<G
         return result;
     } catch (error) {
         console.error("Error in generateText flow:", error);
-        // Ensure a structured error is thrown.
-        throw new Error(`AI generation failed. Details: ${error instanceof Error ? error.message : String(error)}`);
+        
+        const errorMessage = error instanceof Error ? error.message : String(error);
+
+        // Check for specific quota-related error messages from the Google AI API
+        if (errorMessage.includes('429') || /quota|resource exhausted/i.test(errorMessage)) {
+            throw new Error("Has excedido tu cuota actual, por favor revisa tu plan y detalles de facturación.");
+        }
+
+        // For other errors, throw a generic but informative error
+        throw new Error(`AI generation failed. Details: ${errorMessage}`);
     }
 }
