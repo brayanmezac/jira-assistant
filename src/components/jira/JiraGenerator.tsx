@@ -28,6 +28,7 @@ export function JiraGenerator() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [aiContext, setAiContext] = useState('');
+  const [model, setModel] = useState('googleai/gemini-1.5-flash-latest');
 
   const form = useForm<z.infer<typeof jiraStoryFormSchema>>({
     resolver: zodResolver(jiraStoryFormSchema),
@@ -37,6 +38,7 @@ export function JiraGenerator() {
       number: '' as any,
       project: '',
       userId: user?.uid || '',
+      model: 'googleai/gemini-1.5-flash-latest',
     },
   });
 
@@ -49,6 +51,7 @@ export function JiraGenerator() {
   useEffect(() => {
     if (state?.success && state.data) {
         setAiContext(form.getValues('description'));
+        setModel(form.getValues('model'));
     }
     if (state && !state.success && state.message) {
       toast({
@@ -71,6 +74,7 @@ export function JiraGenerator() {
           storyNumber={state.data.storyNumber}
           tasks={state.data.tasks}
           aiContext={aiContext}
+          model={model}
         />
       ) : !state.success && state.message ? (
         <Alert variant="destructive" className="mt-8">

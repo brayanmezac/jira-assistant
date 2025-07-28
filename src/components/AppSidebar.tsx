@@ -16,7 +16,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from '@/components/ui/sidebar';
-import { Home, Settings, Tags, LogOut, Code, Brackets } from 'lucide-react';
+import { Home, Settings, Tags, LogOut, Code, Brackets, LifeBuoy } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
@@ -34,6 +34,7 @@ const translations = {
     projectCodes: 'Project Codes',
     taskCodes: 'Task Codes',
     settings: 'Settings',
+    help: 'Help',
     signOut: 'Sign Out',
   },
   es: {
@@ -42,6 +43,7 @@ const translations = {
     projectCodes: 'Códigos de Proyecto',
     taskCodes: 'Códigos de Tarea',
     settings: 'Configuración',
+    help: 'Ayuda',
     signOut: 'Cerrar Sesión',
   }
 };
@@ -51,6 +53,7 @@ export function AppSidebar({ children }: { children: ReactNode }) {
   const { user, signOut } = useAuth();
   const { settings } = useSettings();
   const isCodesRoute = pathname.startsWith('/codes');
+  const isHelpRoute = pathname.startsWith('/help');
   const t = translations[settings.language as keyof typeof translations] || translations.en;
 
   return (
@@ -91,18 +94,31 @@ export function AppSidebar({ children }: { children: ReactNode }) {
               <CollapsibleContent>
                 <SidebarMenuSub>
                   <SidebarMenuSubItem>
-                    <SidebarMenuSubButton asChild isActive={pathname === '/codes' || pathname === '/codes/projects'}>
+                    <SidebarMenuSubButton asChild isActive={pathname.startsWith('/codes/projects')}>
                       <Link href="/codes/projects"><Brackets /><span>{t.projectCodes}</span></Link>
                     </SidebarMenuSubButton>
                   </SidebarMenuSubItem>
                   <SidebarMenuSubItem>
-                    <SidebarMenuSubButton asChild isActive={pathname === '/codes/tasks'}>
+                    <SidebarMenuSubButton asChild isActive={pathname.startsWith('/codes/tasks')}>
                       <Link href="/codes/tasks"><Code /><span>{t.taskCodes}</span></Link>
                     </SidebarMenuSubButton>
                   </SidebarMenuSubItem>
                 </SidebarMenuSub>
               </CollapsibleContent>
             </Collapsible>
+
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={isHelpRoute}
+                tooltip={{ children: t.help }}
+              >
+                <Link href="/help">
+                  <LifeBuoy />
+                  <span>{t.help}</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
 
 
             <SidebarMenuItem>

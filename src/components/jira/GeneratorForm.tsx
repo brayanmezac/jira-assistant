@@ -50,6 +50,9 @@ const translations = {
         aiContextLabel: 'AI Context',
         aiContextPlaceholder: 'Provide all relevant meeting notes, technical details, or user requirements. This context will be used by the AI tag in your template.',
         aiContextDescription: "This context will be injected into your project's template where you've placed an <AI /> tag.",
+        modelLabel: 'AI Model',
+        modelPlaceholder: 'Select an AI model',
+        modelDescription: 'Choose the generative model to use for content creation.',
         submitButton: 'Prepare for Jira',
         submittingButton: 'Preparing...',
     },
@@ -65,6 +68,9 @@ const translations = {
         aiContextLabel: 'Contexto para la IA',
         aiContextPlaceholder: 'Proporciona todas las notas de reunión, detalles técnicos o requisitos de usuario relevantes. Este contexto será utilizado por la etiqueta AI en tu plantilla.',
         aiContextDescription: 'Este contexto se inyectará en la plantilla de tu proyecto donde hayas colocado una etiqueta <AI />.',
+        modelLabel: 'Modelo de IA',
+        modelPlaceholder: 'Selecciona un modelo de IA',
+        modelDescription: 'Elige el modelo generativo a utilizar para la creación de contenido.',
         submitButton: 'Preparar para Jira',
         submittingButton: 'Preparando...',
     }
@@ -94,6 +100,7 @@ export function GeneratorForm({ formAction, initialState }: GeneratorFormProps) 
       number: '' as any, // Changed from undefined to empty string
       project: '',
       userId: user?.uid || '',
+      model: 'googleai/gemini-1.5-flash-latest',
     },
     context: initialState,
   });
@@ -191,6 +198,29 @@ export function GeneratorForm({ formAction, initialState }: GeneratorFormProps) 
                   <FormMessage />
                 </FormItem>
               )}
+            />
+             <FormField
+                control={form.control}
+                name="model"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>{t.modelLabel}</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder={t.modelPlaceholder} />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            <SelectItem value="googleai/gemini-1.5-flash-latest">Google Gemini 1.5 Flash</SelectItem>
+                            <SelectItem value="openai/gpt-4o">OpenAI GPT-4o</SelectItem>
+                            <SelectItem value="openai/gpt-3.5-turbo">OpenAI GPT-3.5 Turbo</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <FormDescription>{t.modelDescription}</FormDescription>
+                    <FormMessage />
+                    </FormItem>
+                )}
             />
           </CardContent>
           <CardFooter>

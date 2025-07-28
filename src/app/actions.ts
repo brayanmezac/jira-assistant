@@ -10,6 +10,8 @@ import {
 } from '@/lib/types';
 import { getTaskCodes, getProjectCodes, getProjectCode } from '@/lib/firebase';
 import { generateText } from '@/ai/flows/generic-text-generation';
+import { ModelReference } from 'genkit/model';
+import { ai } from '@/ai/genkit';
 
 export type FormState = {
   success: boolean;
@@ -24,13 +26,15 @@ export type FormState = {
 };
 
 /**
- * Processes a template string, finding all <AI> tags and replacing them with AI-generated content.
+ * Processes a template string, finding all <AI> tags and replacing them with AI-generated content
+ * in a single batch request to optimize token usage.
  * If the context is empty, it removes the AI tags instead of calling the AI.
  * @param template The template string to process.
  * @param context The user-provided context to inject into the AI prompt. Can be empty.
+ * @param model The AI model to use.
  * @returns The processed string with the AI content injected or tags removed.
  */
-async function processTemplateWithAI(template: string, context: string): Promise<string> {
+async function processTemplateWithAI(template: string, context: string, model: ModelReference | string): Promise<string> {
     const aiTagRegex = /<AI\s+([^>]+)\s*\/>/gs;
 
     // If context is empty, just strip the AI tags and return the template.
@@ -41,11 +45,14 @@ async function processTemplateWithAI(template: string, context: string): Promise
     let processedTemplate = template;
     const matches = Array.from(template.matchAll(aiTagRegex));
 
-    // Create an array of promises for all AI generations
-    const aiPromises = matches.map(match => {
-        const fullMatch = match[0];
+    if (matches.length === 0) {
+        return template;
+    }
+    
+    // Create a single prompt that asks the AI to act as a JSON service
+    // and generate all required parts at once.
+    const prompts = matches.map((match, index) => {
         const attrsString = match[1];
-
         const getAttr = (name: string) => {
             const regex = new RegExp(`${name}="([^"]+)"`);
             const attrMatch = attrsString.match(regex);
@@ -54,33 +61,54 @@ async function processTemplateWithAI(template: string, context: string): Promise
 
         const prompt = getAttr('prompt');
         const system = getAttr('system');
-        
-        const fullPrompt = `${prompt}\n\nContexto:\n\`\`\`\n${context}\n\`\`\``;
+        const maxLines = getAttr('maxLines') || '5'; // Default to 5 lines
 
-        return generateText({
-            prompt: fullPrompt,
-            systemInstruction: system,
-        }).then(aiResult => ({
-            fullMatch,
-            replacement: aiResult.generatedText,
-        })).catch(error => {
-            console.error("Error during a specific AI tag processing:", error);
-            const errorMessage = `[AI Generation Failed: ${error instanceof Error ? error.message : 'Unknown error'}]`;
-            return {
-                fullMatch,
-                replacement: errorMessage
-            };
-        });
+        return {
+            id: `output_${index}`,
+            prompt: prompt,
+            system: system,
+            maxLines: parseInt(maxLines, 10),
+        };
     });
 
-    // Wait for all AI generations to complete
-    const results = await Promise.all(aiPromises);
+    const batchPrompt = `
+        Please act as a JSON generation service. Based on the following context, generate the text for each of the prompt IDs listed below.
+        
+        Context:
+        \`\`\`
+        ${context}
+        \`\`\`
 
-    // Replace all tags in the template with their corresponding results
-    for (const result of results) {
-        processedTemplate = processedTemplate.replace(result.fullMatch, result.replacement);
+        For each prompt, adhere to its specific system instruction and generate text with a maximum of ${"{{maxLines}}"} lines.
+        Respond with a single, valid JSON object with keys corresponding to the prompt IDs. Do not include any other text or explanations in your response.
+
+        Prompts to generate:
+        ${prompts.map(p => `- ID: "${p.id}", System Instruction: "${p.system}", Prompt: "${p.prompt}", Max Lines: ${p.maxLines}`).join('\n')}
+    `;
+    
+    try {
+        const aiResult = await generateText({
+            model: model,
+            prompt: batchPrompt,
+            systemInstruction: "You are a JSON generation service. Respond only with valid JSON.",
+        });
+
+        const parsedResult = JSON.parse(aiResult.generatedText);
+
+        // Replace all tags in the template with their corresponding results
+        matches.forEach((match, index) => {
+            const promptId = `output_${index}`;
+            const replacement = parsedResult[promptId] || `[AI Generation Failed for prompt: ${prompts[index].prompt}]`;
+            processedTemplate = processedTemplate.replace(match[0], replacement);
+        });
+
+    } catch (error) {
+        console.error("Error during batch AI processing:", error);
+        const errorMessage = `[AI Generation Failed: ${error instanceof Error ? error.message : 'Unknown error'}]`;
+        // Replace all AI tags with a single error message
+        processedTemplate = template.replace(aiTagRegex, errorMessage);
     }
-
+    
     return processedTemplate;
 }
 
@@ -95,6 +123,7 @@ export async function generateJiraTicketsAction(
     number: Number(formData.get('number')),
     project: formData.get('project'),
     userId: formData.get('userId'),
+    model: formData.get('model'),
   });
 
   if (!validatedFields.success) {
@@ -104,7 +133,7 @@ export async function generateJiraTicketsAction(
     };
   }
   
-  const { name, description, project, number, userId } = validatedFields.data;
+  const { name, description, project, number, userId, model } = validatedFields.data;
 
   if (!userId) {
     return {
@@ -127,7 +156,8 @@ export async function generateJiraTicketsAction(
     const fullProject = await getProjectCode(projectInfo.id);
     const template = fullProject?.template || description; 
     
-    const finalDescription = await processTemplateWithAI(template, description);
+    const selectedModel = ai.model(model);
+    const finalDescription = await processTemplateWithAI(template, description, selectedModel);
 
     const projectKey = projectInfo.code;
     
@@ -180,6 +210,7 @@ const createJiraTicketsInput = z.object({
   settings: jiraSettingsSchema,
   tasks: z.array(z.any()),
   aiContext: z.string(),
+  model: z.string(),
 });
 
 type CreateJiraTicketsInput = z.infer<typeof createJiraTicketsInput>;
@@ -203,6 +234,7 @@ export async function createJiraTickets(
     settings,
     tasks,
     aiContext,
+    model,
   } = input;
   const { url, email, token, storyIssueTypeId } = settings;
 
@@ -264,13 +296,15 @@ export async function createJiraTickets(
     const storyData = await storyResponse.json();
     const storyKey = storyData.key;
     console.log('[JIRA DEBUG] Story created successfully:', storyData);
+    
+    const selectedModel = ai.model(model);
 
     for (const subtask of tasks) {
       const subtaskSummary = `${projectKey}_${storyNumber}_${subtask.type} ${subtask.name}`;
       let subtaskDescription = '';
 
       if (subtask.template) {
-        subtaskDescription = await processTemplateWithAI(subtask.template, aiContext);
+        subtaskDescription = await processTemplateWithAI(subtask.template, aiContext, selectedModel);
       } 
       
       const subtaskPayload = {

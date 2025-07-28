@@ -5,8 +5,10 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
+import { ModelReference } from 'genkit/model';
 
 const GenericTextGenerationInputSchema = z.object({
+  model: z.any().describe('The AI model to use for generation.'), // Using z.any() as ModelReference is complex
   prompt: z.string().describe('The main prompt or content for the AI to process.'),
   systemInstruction: z.string().optional().describe('A system-level instruction to guide the AI\'s behavior (e.g., "Act as a technical analyst").'),
   // Add other parameters like temperature, model, etc. if needed in the future
@@ -26,7 +28,7 @@ export const generateTextFlow = ai.defineFlow(
   },
   async (input) => {
     const { text } = await ai.generate({
-      model: 'googleai/gemini-1.5-flash-latest',
+      model: input.model as ModelReference, // Cast to the correct type
       prompt: input.prompt,
       system: input.systemInstruction,
     });

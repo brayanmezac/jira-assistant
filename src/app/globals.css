@@ -2,9 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: Arial, Helvetica, sans-serif;
-}
+/* Add PrismJS theme styles */
+@import 'prismjs/themes/prism-okaidia.css';
 
 @layer base {
   :root {
@@ -84,5 +83,28 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+    font-family: Arial, Helvetica, sans-serif;
   }
+}
+
+/* Styles for react-simple-code-editor */
+.code-editor-container {
+    position: relative;
+    font-family: 'Fira Code', 'Dank Mono', 'Consolas', monospace;
+    text-align: left;
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius);
+    background-color: #272822; /* Same as okaidia theme */
+}
+
+.code-editor-textarea:focus {
+    outline: none;
+}
+
+.code-editor-container .prism-editor__textarea,
+.code-editor-container .prism-editor__pre {
+    padding: 1rem !important; /* Use important to override inline styles */
+    min-height: 20rem; /* 320px */
+    white-space: pre-wrap;
+    word-wrap: break-word;
 }
