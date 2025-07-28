@@ -7,6 +7,7 @@ import { getProjectCodes } from '@/lib/firebase';
 import type { ProjectCode } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSettings } from '@/hooks/use-settings';
+import { useAuth } from '@/components/auth/AuthProvider';
 
 function CodesSkeleton() {
   return (
@@ -33,12 +34,14 @@ export default function ProjectCodesPage() {
   const [projects, setProjects] = useState<ProjectCode[]>([]);
   const [loading, setLoading] = useState(true);
   const { settings } = useSettings();
+  const { user } = useAuth();
   const t = translations[settings.language as keyof typeof translations] || translations.en;
 
   useEffect(() => {
+    if (!user) return;
     async function loadData() {
       try {
-        const projectData = await getProjectCodes();
+        const projectData = await getProjectCodes(user.uid);
         projectData.sort((a, b) => a.name.localeCompare(b.name));
         setProjects(projectData);
       } catch (error) {
@@ -48,7 +51,11 @@ export default function ProjectCodesPage() {
       }
     }
     loadData();
-  }, []);
+  }, [user]);
+
+  if (!user) {
+    return <CodesSkeleton />;
+  }
 
   return (
     <div className="flex flex-col gap-8">

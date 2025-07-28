@@ -2,7 +2,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getTaskCodes } from '@/lib/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckSquare, Loader2 } from 'lucide-react';
 import type { TaskCode } from '@/lib/types';
@@ -20,22 +19,10 @@ const translations = {
 }
 
 
-export function SubtasksPreview() {
-  const [tasks, setTasks] = useState<TaskCode[]>([]);
-  const [loading, setLoading] = useState(true);
+export function SubtasksPreview({ tasks }: { tasks: TaskCode[] }) {
+  const [loading, setLoading] = useState(false);
   const { settings } = useSettings();
   const t = translations[settings.language as keyof typeof translations] || translations.en;
-
-  useEffect(() => {
-    const fetchTasks = async () => {
-      setLoading(true);
-      const fetchedTasks = await getTaskCodes();
-      setTasks(fetchedTasks);
-      setLoading(false);
-    };
-    fetchTasks();
-  }, []);
-
 
   return (
     <Card>

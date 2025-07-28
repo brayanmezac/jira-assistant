@@ -51,6 +51,7 @@ import {
 import { useSettings } from '@/hooks/use-settings';
 import { validateJiraProject, getJiraProjects, type JiraApiProject } from '@/app/actions';
 import { ScrollArea } from '../ui/scroll-area';
+import { useAuth } from '../auth/AuthProvider';
 
 const translations = {
     en: {
@@ -133,6 +134,7 @@ function ImportProjectsDialog({
   onProjectAdded: (project: ProjectCode) => void;
 }) {
   const { settings } = useSettings();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -153,8 +155,15 @@ function ImportProjectsDialog({
   };
 
   const handleAddProject = async (project: JiraApiProject) => {
+    if (!user) return;
     try {
-      const newProject = await addProjectCode({ name: project.name, code: project.key });
+      const newProjectData = { 
+        name: project.name, 
+        code: project.key,
+        userId: user.uid,
+        template: '',
+      };
+      const newProject = await addProjectCode(newProjectData);
       toast({
         title: '✅ Success!',
         description: t.importSuccess.replace('{projectName}', project.name),
@@ -233,6 +242,7 @@ export function ProjectCodes({
     null
   );
   const { settings } = useSettings();
+  const { user } = useAuth();
   const t = translations[settings.language as keyof typeof translations] || translations.en;
 
   const handleProjectAddedFromImport = (newProject: ProjectCode) => {
@@ -243,10 +253,12 @@ export function ProjectCodes({
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!user) return;
     setLoading(true);
 
     const formData = new FormData(event.currentTarget);
     const newProjectData = {
+      userId: user.uid,
       code: formData.get('code') as string,
       name: formData.get('name') as string,
     };
@@ -263,7 +275,6 @@ export function ProjectCodes({
       return;
     }
 
-    // --- JIRA VALIDATION ---
     const validationResult = await validateJiraProject({
       projectCode: validatedFields.data.code,
       settings,
@@ -278,7 +289,6 @@ export function ProjectCodes({
       setLoading(false);
       return;
     }
-    // --- END JIRA VALIDATION ---
 
     try {
       const newProject = await addProjectCode(validatedFields.data);
@@ -315,21 +325,8 @@ export function ProjectCodes({
       name: formData.get('edit-name') as string,
     };
 
-    const validatedFields = projectCodeSchema.omit({template: true}).safeParse(updatedData);
-
-    if (!validatedFields.success) {
-      toast({
-        variant: 'destructive',
-        title: '❌ Error',
-        description: t.errorRequired,
-      });
-      setLoading(false);
-      return;
-    }
-
-    // --- JIRA VALIDATION ON EDIT ---
      const validationResult = await validateJiraProject({
-      projectCode: validatedFields.data.code,
+      projectCode: updatedData.code,
       settings,
     });
 
@@ -342,10 +339,9 @@ export function ProjectCodes({
       setLoading(false);
       return;
     }
-    // --- END JIRA VALIDATION ---
 
     try {
-      await updateProjectCode(editingProject.id, validatedFields.data);
+      await updateProjectCode(editingProject.id, updatedData);
       toast({
         title: '✅ Success!',
         description: t.updateSuccess,
@@ -354,12 +350,12 @@ export function ProjectCodes({
         p
           .map((proj) =>
             proj.id === editingProject.id
-              ? { ...proj, ...validatedFields.data }
+              ? { ...proj, ...updatedData }
               : proj
           )
           .sort((a, b) => a.name.localeCompare(b.name))
       );
-      setEditingProject(null); // This will close the dialog via the `open` prop
+      setEditingProject(null);
     } catch (error) {
       console.error(error);
       toast({

@@ -3,10 +3,11 @@
 
 import { useEffect, useState } from 'react';
 import { TaskCodes } from '@/components/codes/TaskCodes';
-import { getTaskCodes } from '@/lib/firebase';
-import type { TaskCode } from '@/lib/types';
+import { getTaskCodes, getProjectCodes } from '@/lib/firebase';
+import type { TaskCode, ProjectCode } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSettings } from '@/hooks/use-settings';
+import { useAuth } from '@/components/auth/AuthProvider';
 
 function CodesSkeleton() {
   return (
@@ -31,25 +32,40 @@ const translations = {
 
 export default function TaskCodesPage() {
   const [tasks, setTasks] = useState<TaskCode[]>([]);
+  const [projects, setProjects] = useState<ProjectCode[]>([]);
   const [loading, setLoading] = useState(true);
   const { settings } = useSettings();
+  const { user } = useAuth();
   const t = translations[settings.language as keyof typeof translations] || translations.en;
 
 
   useEffect(() => {
+    if (!user) return;
     async function loadData() {
       try {
-        const taskData = await getTaskCodes();
+        const [taskData, projectData] = await Promise.all([
+            getTaskCodes(user!.uid),
+            getProjectCodes(user!.uid)
+        ]);
+        
         taskData.sort((a, b) => a.name.localeCompare(b.name));
+        projectData.sort((a, b) => a.name.localeCompare(b.name));
+
         setTasks(taskData);
+        setProjects(projectData);
+
       } catch (error) {
-        console.error("Failed to load task codes:", error);
+        console.error("Failed to load task and project codes:", error);
       } finally {
         setLoading(false);
       }
     }
     loadData();
-  }, []);
+  }, [user]);
+  
+  if (!user) {
+    return <CodesSkeleton />;
+  }
 
   return (
     <div className="flex flex-col gap-8">
@@ -61,7 +77,7 @@ export default function TaskCodesPage() {
           {t.description}
         </p>
       </header>
-      {loading ? <CodesSkeleton /> : <TaskCodes initialTasks={tasks} />}
+      {loading ? <CodesSkeleton /> : <TaskCodes initialTasks={tasks} userProjects={projects} />}
     </div>
   );
 }

@@ -30,6 +30,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { SubmitButton } from '../SubmitButton';
 import { Bot, PencilLine } from 'lucide-react';
 import { useSettings } from '@/hooks/use-settings';
+import { useAuth } from '../auth/AuthProvider';
 
 type GeneratorFormProps = {
   formAction: (payload: FormData) => void;
@@ -73,15 +74,17 @@ const translations = {
 export function GeneratorForm({ formAction, initialState }: GeneratorFormProps) {
     const [projects, setProjects] = useState<ProjectCode[]>([]);
     const { settings } = useSettings();
+    const { user } = useAuth();
     const t = translations[settings.language as keyof typeof translations] || translations.en;
 
     useEffect(() => {
+        if (!user) return;
         const fetchProjects = async () => {
-            const projectList = await getProjectCodes();
+            const projectList = await getProjectCodes(user.uid);
             setProjects(projectList);
         };
         fetchProjects();
-    }, []);
+    }, [user]);
 
   const form = useForm<z.infer<typeof jiraStoryFormSchema>>({
     resolver: zodResolver(jiraStoryFormSchema),
@@ -192,5 +195,3 @@ export function GeneratorForm({ formAction, initialState }: GeneratorFormProps) 
     </Form>
   );
 }
-
-    

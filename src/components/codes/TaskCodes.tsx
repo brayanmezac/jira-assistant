@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useMemo } from 'react';
 import Image from 'next/image';
 import {
   Card,
@@ -15,8 +15,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Pencil, Trash2, Download, Upload, MoreVertical } from 'lucide-react';
-import type { TaskCode } from '@/lib/types';
+import { Loader2, Pencil, Trash2, Download, Upload, MoreVertical, Power, PowerOff, Check, ChevronsUpDown, Search, Badge } from 'lucide-react';
+import type { TaskCode, ProjectCode } from '@/lib/types';
 import {
   Table,
   TableBody,
@@ -56,11 +56,28 @@ import {
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
+    DropdownMenuCheckboxItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator
  } from '../ui/dropdown-menu';
+ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { z } from 'zod';
+import { useAuth } from '../auth/AuthProvider';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
+import { cn } from '@/lib/utils';
 
 const translations = {
     en: {
+        allProjects: 'All Projects',
+        general: 'General',
+        projects: 'Projects',
+        searchPlaceholder: 'Search by name, type, or code...',
+        filterByProject: 'Filter by project',
+        filterByStatus: 'Filter by status',
+        all: 'All',
+        active: 'Active',
+        inactive: 'Inactive',
         importFromJira: 'Import from Jira',
         importFromJson: 'Import from JSON',
         exportToJson: 'Export to JSON',
@@ -82,6 +99,8 @@ const translations = {
         tableName: 'Name',
         tableType: 'Type',
         tableCode: 'Code (ID)',
+        tableStatus: 'Status',
+        tableProjects: 'Projects',
         tableActions: 'Actions',
         editDialogTitle: 'Edit Task Code',
         editDialogDescription: "Make changes to your task here. Click save when you're done.",
@@ -106,6 +125,15 @@ const translations = {
         importFailedDesc: 'Invalid JSON format or file content.',
     },
     es: {
+        allProjects: 'Todos los Proyectos',
+        general: 'General',
+        projects: 'Proyectos',
+        searchPlaceholder: 'Buscar por nombre, tipo o código...',
+        filterByProject: 'Filtrar por proyecto',
+        filterByStatus: 'Filtrar por estado',
+        all: 'Todos',
+        active: 'Activo',
+        inactive: 'Inactivo',
         importFromJira: 'Importar desde Jira',
         importFromJson: 'Importar desde JSON',
         exportToJson: 'Exportar a JSON',
@@ -127,6 +155,8 @@ const translations = {
         tableName: 'Nombre',
         tableType: 'Tipo',
         tableCode: 'Código (ID)',
+        tableStatus: 'Estado',
+        tableProjects: 'Proyectos',
         tableActions: 'Acciones',
         editDialogTitle: 'Editar Código de Tarea',
         editDialogDescription: 'Haz cambios a tu tarea aquí. Haz clic en guardar cuando termines.',
@@ -160,6 +190,7 @@ function ImportIssueTypesDialog({
     existingTasks: TaskCode[];
   }) {
     const { settings } = useSettings();
+    const { user } = useAuth();
     const { toast } = useToast();
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -180,12 +211,16 @@ function ImportIssueTypesDialog({
     };
   
     const handleAddTask = async (issueType: JiraApiIssueType) => {
+      if (!user) return;
       try {
         const newTask = await addTaskCode({
+             userId: user.uid,
              name: issueType.name,
              type: issueType.name, // Default type to name
              code: issueType.id,
-             iconUrl: issueType.iconUrl
+             iconUrl: issueType.iconUrl,
+             status: 'active',
+             projectIds: []
             });
         toast({
           title: '✅ Success!',
@@ -258,15 +293,110 @@ function ImportIssueTypesDialog({
     );
   }
 
-export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
+function ProjectsMultiSelect({
+    userProjects,
+    selectedProjectIds,
+    onSelectionChange,
+    lang
+}: {
+    userProjects: ProjectCode[];
+    selectedProjectIds: string[];
+    onSelectionChange: (ids: string[]) => void;
+    lang: 'en' | 'es';
+}) {
+    const t = translations[lang];
+    const [isOpen, setIsOpen] = useState(false);
+
+    const handleSelect = (projectId: string) => {
+        const newSelection = selectedProjectIds.includes(projectId)
+            ? selectedProjectIds.filter(id => id !== projectId)
+            : [...selectedProjectIds, projectId];
+        onSelectionChange(newSelection);
+    };
+
+    const selectedProjects = userProjects.filter(p => selectedProjectIds.includes(p.id));
+
+    return (
+        <Popover open={isOpen} onOpenChange={setIsOpen}>
+            <PopoverTrigger asChild>
+                <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={isOpen}
+                    className="w-full justify-between"
+                >
+                    <span className='truncate'>
+                        {selectedProjectIds.length === 0
+                            ? t.general
+                            : selectedProjects.map(p => p.name).join(', ')}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                <Command>
+                    <CommandInput placeholder={t.projects} />
+                    <CommandList>
+                        <CommandEmpty>No projects found.</CommandEmpty>
+                        <CommandGroup>
+                            {userProjects.map((project) => (
+                                <CommandItem
+                                    key={project.id}
+                                    onSelect={() => handleSelect(project.id)}
+                                >
+                                    <Check
+                                        className={cn(
+                                            "mr-2 h-4 w-4",
+                                            selectedProjectIds.includes(project.id) ? "opacity-100" : "opacity-0"
+                                        )}
+                                    />
+                                    {project.name}
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
+    );
+}
+
+export function TaskCodes({ initialTasks, userProjects }: { initialTasks: TaskCode[]; userProjects: ProjectCode[] }) {
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
+  const { user } = useAuth();
+
   const [tasks, setTasks] = useState(initialTasks);
   const [loading, setLoading] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskCode | null>(null);
+  const [editingProjectIds, setEditingProjectIds] = useState<string[]>([]);
+
+  // Filters state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [projectFilter, setProjectFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  
   const { settings } = useSettings();
   const t = translations[settings.language as keyof typeof translations] || translations.en;
+
+  const filteredTasks = useMemo(() => {
+    return tasks.filter(task => {
+        const searchMatch = searchTerm.length === 0 ||
+            task.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            task.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            task.code.toLowerCase().includes(searchTerm.toLowerCase());
+
+        const statusMatch = statusFilter === 'all' || task.status === statusFilter;
+
+        const projectMatch = projectFilter === 'all' ||
+            (projectFilter === 'general' && (!task.projectIds || task.projectIds.length === 0)) ||
+            (task.projectIds && task.projectIds.includes(projectFilter));
+
+        return searchMatch && statusMatch && projectMatch;
+    });
+  }, [tasks, searchTerm, statusFilter, projectFilter]);
+
 
   const handleTaskAddedFromImport = (newTask: TaskCode) => {
     if (!tasks.some(p => p.id === newTask.id)) {
@@ -293,51 +423,37 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!user) return;
     setLoading(true);
 
     const formData = new FormData(event.currentTarget);
     const newTaskData = {
+      userId: user.uid,
       code: formData.get('code') as string,
       name: formData.get('name') as string,
       type: formData.get('type') as string,
+      projectIds: editingProjectIds,
+      status: 'active' as 'active' | 'inactive',
     };
 
     const validatedFields = taskCodeSchema.omit({iconUrl: true}).safeParse(newTaskData);
-
     if (!validatedFields.success) {
-      toast({
-        variant: 'destructive',
-        title: '❌ Error',
-        description: validatedFields.error.errors.map(e => e.message).join(', '),
-      });
+      toast({ variant: 'destructive', title: '❌ Error', description: validatedFields.error.errors.map(e => e.message).join(', '), });
       setLoading(false);
       return;
     }
 
     try {
       const iconUrl = await findIconUrlForCode(validatedFields.data.code);
-      const dataToSave = {
-        ...validatedFields.data,
-        iconUrl: iconUrl || '',
-      };
-
+      const dataToSave = { ...validatedFields.data, iconUrl: iconUrl || '' };
       const newTask = await addTaskCode(dataToSave);
-
-      toast({
-        title: '✅ Success!',
-        description: t.addSuccess,
-      });
-      setTasks((p) =>
-        [newTask, ...p].sort((a, b) => a.name.localeCompare(b.name))
-      );
+      toast({ title: '✅ Success!', description: t.addSuccess });
+      setTasks(p => [newTask, ...p].sort((a, b) => a.name.localeCompare(b.name)));
       formRef.current?.reset();
+      setEditingProjectIds([]);
     } catch (error) {
       console.error(error);
-      toast({
-        variant: 'destructive',
-        title: `❌ ${t.addError}`,
-        description: 'An error occurred. Check the developer console for details.',
-      });
+      toast({ variant: 'destructive', title: `❌ ${t.addError}`, description: 'An error occurred.' });
     } finally {
       setLoading(false);
     }
@@ -345,57 +461,35 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
 
   const handleEditSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!editingTask) return;
-
+    if (!editingTask || !user) return;
     setLoading(true);
+
     const formData = new FormData(event.currentTarget);
     const updatedData = {
       code: formData.get('edit-code') as string,
       name: formData.get('edit-name') as string,
       type: formData.get('edit-type') as string,
+      projectIds: editingProjectIds,
+      userId: user.uid
     };
-
-    const validatedFields = taskCodeSchema.omit({ iconUrl: true }).safeParse(updatedData);
-
+    
+    const validatedFields = taskCodeSchema.omit({ iconUrl: true, status: true }).safeParse(updatedData);
     if (!validatedFields.success) {
-      toast({
-        variant: 'destructive',
-        title: '❌ Error',
-        description: validatedFields.error.errors.map(e => e.message).join(', '),
-      });
-      setLoading(false);
-      return;
+        toast({ variant: 'destructive', title: '❌ Error', description: validatedFields.error.errors.map(e => e.message).join(', ') });
+        setLoading(false);
+        return;
     }
 
     try {
       const iconUrl = await findIconUrlForCode(validatedFields.data.code);
-      const dataToUpdate = {
-        ...validatedFields.data,
-        iconUrl: iconUrl || '',
-      }
-
+      const dataToUpdate = { ...validatedFields.data, iconUrl: iconUrl || '' };
       await updateTaskCode(editingTask.id, dataToUpdate);
-      toast({
-        title: '✅ Success!',
-        description: t.updateSuccess,
-      });
-      setTasks((p) =>
-        p
-          .map((task) =>
-            task.id === editingTask.id
-              ? { ...task, ...dataToUpdate }
-              : task
-          )
-          .sort((a, b) => a.name.localeCompare(b.name))
-      );
+      toast({ title: '✅ Success!', description: t.updateSuccess, });
+      setTasks(p => p.map((task) => task.id === editingTask.id ? { ...task, ...dataToUpdate } : task).sort((a, b) => a.name.localeCompare(b.name)));
       setEditingTask(null);
     } catch (error) {
       console.error(error);
-      toast({
-        variant: 'destructive',
-        title: `❌ ${t.updateError}`,
-        description: 'An error occurred. Check the developer console for details.',
-      });
+      toast({ variant: 'destructive', title: `❌ ${t.updateError}`, description: 'An error occurred.' });
     } finally {
         setLoading(false);
     }
@@ -404,37 +498,39 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
   const handleDelete = async (taskId: string) => {
     try {
       await deleteTaskCode(taskId);
-      toast({
-        title: '✅ Success!',
-        description: t.deleteSuccess,
-      });
-      setTasks((p) => p.filter((task) => task.id !== taskId));
+      toast({ title: '✅ Success!', description: t.deleteSuccess });
+      setTasks(p => p.filter((task) => task.id !== taskId));
     } catch (error) {
       console.error(error);
-      toast({
-        variant: 'destructive',
-        title: `❌ ${t.deleteError}`,
-        description: 'An error occurred. Check the developer console for details.',
-      });
+      toast({ variant: 'destructive', title: `❌ ${t.deleteError}`, description: 'An error occurred.' });
+    }
+  };
+  
+  const handleToggleStatus = async (task: TaskCode) => {
+    const newStatus = task.status === 'active' ? 'inactive' : 'active';
+    try {
+        await updateTaskCode(task.id, { status: newStatus });
+        setTasks(p => p.map(t => t.id === task.id ? { ...t, status: newStatus } : t));
+        toast({ title: '✅ Status Updated' });
+    } catch (error) {
+        console.error(error);
+        toast({ variant: 'destructive', title: `❌ Error updating status`, description: 'An error occurred.' });
     }
   };
 
   const handleExport = () => {
-    const dataStr = JSON.stringify(tasks.map(({id, ...rest}) => rest), null, 2);
+    const dataStr = JSON.stringify(tasks.map(({id, userId, ...rest}) => rest), null, 2);
     const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-    
     const exportFileDefaultName = 'task-codes.json';
-    
     const linkElement = document.createElement('a');
     linkElement.setAttribute('href', dataUri);
     linkElement.setAttribute('download', exportFileDefaultName);
     linkElement.click();
-    toast({
-        title: `✅ ${t.exportSuccess}`,
-    });
+    toast({ title: `✅ ${t.exportSuccess}` });
   }
 
   const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!user) return;
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -443,32 +539,30 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
       try {
         const text = e.target?.result;
         const json = JSON.parse(text as string);
-        const tasksToImport = z.array(taskCodeSchema).parse(json);
+        const tasksToImport = z.array(taskCodeSchema.omit({ userId: true })).parse(json);
         
         let importedCount = 0;
         for (const task of tasksToImport) {
           if (!tasks.some(t => t.name === task.name)) {
-            const newTask = await addTaskCode(task);
+            const newTaskData = { ...task, userId: user.uid };
+            const newTask = await addTaskCode(newTaskData);
             handleTaskAddedFromImport(newTask);
             importedCount++;
           }
         }
-        toast({
-            title: `✅ ${t.importComplete}`,
-            description: t.importCompleteDesc.replace('{count}', importedCount.toString()),
-        });
-
+        toast({ title: `✅ ${t.importComplete}`, description: t.importCompleteDesc.replace('{count}', importedCount.toString()), });
       } catch (err) {
-        toast({
-            variant: 'destructive',
-            title: `❌ ${t.importFailed}`,
-            description: t.importFailedDesc,
-        });
+        toast({ variant: 'destructive', title: `❌ ${t.importFailed}`, description: t.importFailedDesc });
       }
     };
     reader.readAsText(file);
     if(importFileRef.current) importFileRef.current.value = "";
   }
+
+  const openEditDialog = (task: TaskCode) => {
+    setEditingTask(task);
+    setEditingProjectIds(task.projectIds || []);
+  };
 
   return (
     <Card>
@@ -502,167 +596,176 @@ export function TaskCodes({ initialTasks }: { initialTasks: TaskCode[] }) {
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
-        <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2 col-span-1">
-              <Label htmlFor="code">{t.codeLabel}</Label>
-              <Input
-                id="code"
-                name="code"
-                placeholder={t.codePlaceholder}
-                required
-              />
+        <Dialog onOpenChange={(isOpen) => { if (!isOpen) setEditingTask(null)}}>
+            <DialogTrigger asChild>
+                <Button>{t.addTask}</Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>{t.addTask}</DialogTitle>
+                </DialogHeader>
+                <form ref={formRef} onSubmit={handleSubmit} className="space-y-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2 col-span-1">
+                      <Label htmlFor="code">{t.codeLabel}</Label>
+                      <Input id="code" name="code" placeholder={t.codePlaceholder} required />
+                    </div>
+                    <div className="space-y-2 col-span-1">
+                      <Label htmlFor="type">{t.taskTypeLabel}</Label>
+                      <Input id="type" name="type" placeholder={t.taskTypePlaceholder} required />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="name">{t.taskNameLabel}</Label>
+                    <Input id="name" name="name" placeholder={t.taskNamePlaceholder} required />
+                  </div>
+                   <div className="space-y-2">
+                        <Label>{t.projects}</Label>
+                        <ProjectsMultiSelect
+                            userProjects={userProjects}
+                            selectedProjectIds={editingProjectIds}
+                            onSelectionChange={setEditingProjectIds}
+                            lang={settings.language as 'en' | 'es'}
+                        />
+                    </div>
+                  <DialogFooter>
+                      <DialogClose asChild><Button type="button" variant="secondary">{t.cancel}</Button></DialogClose>
+                      <Button type="submit" disabled={loading}>{loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{t.addTask}</Button>
+                  </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+        
+        <div className='space-y-4'>
+            <div className='flex gap-2 items-center'>
+                <div className='relative flex-1'>
+                    <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground' />
+                    <Input placeholder={t.searchPlaceholder} className='pl-9' value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                </div>
+                <Select value={projectFilter} onValueChange={setProjectFilter}>
+                    <SelectTrigger className='w-[180px]'>
+                        <SelectValue placeholder={t.filterByProject} />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">{t.allProjects}</SelectItem>
+                        <SelectItem value="general">{t.general}</SelectItem>
+                        {userProjects.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className='w-[120px]'>
+                        <SelectValue placeholder={t.filterByStatus} />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">{t.all}</SelectItem>
+                        <SelectItem value="active">{t.active}</SelectItem>
+                        <SelectItem value="inactive">{t.inactive}</SelectItem>
+                    </SelectContent>
+                </Select>
             </div>
-            <div className="space-y-2 col-span-1">
-              <Label htmlFor="type">{t.taskTypeLabel}</Label>
-              <Input
-                id="type"
-                name="type"
-                placeholder={t.taskTypePlaceholder}
-                required
-              />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="name">{t.taskNameLabel}</Label>
-            <Input
-              id="name"
-              name="name"
-              placeholder={t.taskNamePlaceholder}
-              required
-            />
-          </div>
-          <CardFooter className="px-0 pb-0 pt-2">
-            <Button type="submit" disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {t.addTask}
-            </Button>
-          </CardFooter>
-        </form>
-        <div className="max-h-60 overflow-auto">
-          <Table>
-            <TableHeader className="sticky top-0 bg-card">
-              <TableRow>
-                <TableHead>{t.tableName}</TableHead>
-                <TableHead>{t.tableType}</TableHead>
-                <TableHead>{t.tableCode}</TableHead>
-                <TableHead className="text-right w-[120px]">{t.tableActions}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {tasks.map((task) => (
-                <TableRow key={task.id}>
-                  <TableCell className="font-medium flex items-center gap-2">
-                    {task.iconUrl && <Image src={task.iconUrl} alt={task.name} width={16} height={16} unoptimized />}
-                    {task.name}
-                    </TableCell>
-                  <TableCell>{task.type}</TableCell>
-                  <TableCell className="text-muted-foreground">{task.code}</TableCell>
-                  <TableCell className="text-right space-x-1">
-                    <Dialog
-                      open={editingTask?.id === task.id}
-                      onOpenChange={(isOpen) => {
-                        if (!isOpen) setEditingTask(null);
-                        else setEditingTask(task);
-                      }}
-                    >
-                      <DialogTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => setEditingTask(task)}
-                        >
-                          <Pencil className="h-4 w-4" />
+            <div className="max-h-80 overflow-auto">
+              <Table>
+                <TableHeader className="sticky top-0 bg-card">
+                  <TableRow>
+                    <TableHead>{t.tableName}</TableHead>
+                    <TableHead>{t.tableType}</TableHead>
+                    <TableHead>{t.tableCode}</TableHead>
+                    <TableHead>{t.tableProjects}</TableHead>
+                    <TableHead>{t.tableStatus}</TableHead>
+                    <TableHead className="text-right w-[120px]">{t.tableActions}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredTasks.map((task) => (
+                    <TableRow key={task.id}>
+                      <TableCell className="font-medium flex items-center gap-2">
+                        {task.iconUrl && <Image src={task.iconUrl} alt={task.name} width={16} height={16} unoptimized />}
+                        {task.name}
+                        </TableCell>
+                      <TableCell>{task.type}</TableCell>
+                      <TableCell className="text-muted-foreground">{task.code}</TableCell>
+                       <TableCell>
+                        {task.projectIds && task.projectIds.length > 0 ? (
+                            <div className='flex flex-wrap gap-1'>
+                                {task.projectIds.map(id => {
+                                    const project = userProjects.find(p => p.id === id);
+                                    return <Badge key={id} variant="secondary">{project?.code || '??'}</Badge>
+                                })}
+                            </div>
+                        ) : (<Badge variant="outline">{t.general}</Badge>)}
+                      </TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="icon" className='h-8 w-8' onClick={() => handleToggleStatus(task)}>
+                            {task.status === 'active' ? <Power className='h-4 w-4 text-green-500'/> : <PowerOff className='h-4 w-4 text-red-500'/>}
                         </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>{t.editDialogTitle}</DialogTitle>
-                          <DialogDescription>
-                            {t.editDialogDescription}
-                          </DialogDescription>
-                        </DialogHeader>
-                        <form
-                          onSubmit={handleEditSubmit}
-                          className="space-y-4 py-4"
+                      </TableCell>
+                      <TableCell className="text-right space-x-1">
+                        <Dialog
+                          open={editingTask?.id === task.id}
+                          onOpenChange={(isOpen) => { if (!isOpen) setEditingTask(null); }}
                         >
-                          <div className="space-y-2">
-                            <Label htmlFor="edit-name">{t.taskNameLabel}</Label>
-                            <Input
-                              id="edit-name"
-                              name="edit-name"
-                              defaultValue={task.name}
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="edit-type">{t.taskTypeLabel}</Label>
-                            <Input
-                              id="edit-type"
-                              name="edit-type"
-                              defaultValue={task.type}
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="edit-code">{t.codeLabel}</Label>
-                            <Input
-                              id="edit-code"
-                              name="edit-code"
-                              defaultValue={task.code}
-                              required
-                            />
-                          </div>
-                          <DialogFooter>
-                            <DialogClose asChild>
-                              <Button type="button" variant="secondary">
-                                {t.cancel}
-                              </Button>
-                            </DialogClose>
-                            <Button type="submit" disabled={loading}>
-                               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                {t.saveChanges}
+                          <DialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(task)}>
+                              <Pencil className="h-4 w-4" />
                             </Button>
-                          </DialogFooter>
-                        </form>
-                      </DialogContent>
-                    </Dialog>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>
-                            {t.deleteDialogTitle}
-                          </AlertDialogTitle>
-                          <AlertDialogDescription>
-                            {t.deleteDialogDescription.replace('{taskName}', task.name)}
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>{t.cancel}</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => handleDelete(task.id)}
-                             className="bg-destructive hover:bg-destructive/90"
-                          >
-                            {t.deleteConfirm}
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>{t.editDialogTitle}</DialogTitle>
+                              <DialogDescription>{t.editDialogDescription}</DialogDescription>
+                            </DialogHeader>
+                            <form onSubmit={handleEditSubmit} className="space-y-4 py-4">
+                              <div className="space-y-2">
+                                <Label htmlFor="edit-name">{t.taskNameLabel}</Label>
+                                <Input id="edit-name" name="edit-name" defaultValue={task.name} required />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="edit-type">{t.taskTypeLabel}</Label>
+                                <Input id="edit-type" name="edit-type" defaultValue={task.type} required />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="edit-code">{t.codeLabel}</Label>
+                                <Input id="edit-code" name="edit-code" defaultValue={task.code} required />
+                              </div>
+                               <div className="space-y-2">
+                                    <Label>{t.projects}</Label>
+                                    <ProjectsMultiSelect
+                                        userProjects={userProjects}
+                                        selectedProjectIds={editingProjectIds}
+                                        onSelectionChange={setEditingProjectIds}
+                                        lang={settings.language as 'en' | 'es'}
+                                    />
+                                </div>
+                              <DialogFooter>
+                                <DialogClose asChild><Button type="button" variant="secondary">{t.cancel}</Button></DialogClose>
+                                <Button type="submit" disabled={loading}>{loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{t.saveChanges}</Button>
+                              </DialogFooter>
+                            </form>
+                          </DialogContent>
+                        </Dialog>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>{t.deleteDialogTitle}</AlertDialogTitle>
+                              <AlertDialogDescription>{t.deleteDialogDescription.replace('{taskName}', task.name)}</AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>{t.cancel}</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDelete(task.id)} className="bg-destructive hover:bg-destructive/90">{t.deleteConfirm}</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
         </div>
       </CardContent>
     </Card>

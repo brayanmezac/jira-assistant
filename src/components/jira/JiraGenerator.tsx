@@ -23,7 +23,7 @@ export function JiraGenerator() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!state.success && state.message) {
+    if (state && !state.success && state.message) {
       toast({
         variant: 'destructive',
         title: 'An error occurred',
@@ -53,5 +53,3 @@ export function JiraGenerator() {
     </div>
   );
 }
-
-    

@@ -19,6 +19,7 @@ export const jiraSettingsSchema = z.object({
 export type JiraSettings = z.infer<typeof jiraSettingsSchema>;
 
 export const projectCodeSchema = z.object({
+  userId: z.string(),
   code: z.string().min(1, { message: 'Code is required.'}),
   name: z.string().min(1, { message: 'Name is required.'}),
   template: z.string().optional(),
@@ -27,10 +28,13 @@ export type ProjectCode = z.infer<typeof projectCodeSchema> & { id: string };
 
 
 export const taskCodeSchema = z.object({
+  userId: z.string(),
   code: z.string().min(1, { message: 'Code (ID) is required.' }),
   name: z.string().min(1, { message: 'Name is required.' }),
   type: z.string().min(1, { message: 'Type is required.' }),
   iconUrl: z.string().url().or(z.literal('')).default(''),
+  status: z.enum(['active', 'inactive']).default('active'),
+  projectIds: z.array(z.string()).optional().default([]), // Empty array means "General"
 });
 export type TaskCode = z.infer<typeof taskCodeSchema> & { id: string };
 

@@ -10,6 +10,7 @@ import {
 } from '@/lib/types';
 import { getTaskCodes, getProjectCodes, getProjectCode } from '@/lib/firebase';
 import { generateText } from '@/ai/flows/generic-text-generation';
+import { auth } from '@/lib/firebase';
 
 
 export type FormState = {
@@ -88,11 +89,19 @@ export async function generateJiraTicketsAction(
       message: 'Invalid form data. Please check your inputs.',
     };
   }
+  
+  const userId = auth.currentUser?.uid;
+  if (!userId) {
+    return {
+        success: false,
+        message: 'User not authenticated.',
+    };
+  }
 
   const { name, description, project, number } = validatedFields.data;
 
   try {
-    const projects = await getProjectCodes();
+    const projects = await getProjectCodes(userId);
     const projectInfo = projects.find((p) => p.name === project);
 
     if (!projectInfo || !projectInfo.id) {
@@ -102,25 +111,32 @@ export async function generateJiraTicketsAction(
       };
     }
     
-    // Fetch full project details to get the template
     const fullProject = await getProjectCode(projectInfo.id);
-    const template = fullProject?.template || ''; // Default to empty if no template
+    const template = fullProject?.template || description; 
     
-    // Process the template, which may or may not involve an AI call
     const finalDescription = await processTemplateWithAI(template, description);
 
     const projectKey = projectInfo.code;
-    const subtasks = await getTaskCodes();
+    
+    // Fetch user's task codes
+    const allTaskCodes = await getTaskCodes(userId);
+
+    // Filter tasks for the selected project
+    const relevantTasks = allTaskCodes.filter(task => 
+      task.status === 'active' && // Must be active
+      (task.projectIds?.length === 0 || !task.projectIds || task.projectIds.includes(projectInfo.id)) // General or specific to this project
+    );
+
 
     return {
       success: true,
       message: 'Content ready for Jira.',
       data: {
-        storyDescription: finalDescription, // Use the template-processed description
+        storyDescription: finalDescription, 
         storyName: name,
         projectKey: projectKey,
         storyNumber: number,
-        tasks: subtasks,
+        tasks: relevantTasks,
       },
     };
   } catch (error: any) {
@@ -185,7 +201,6 @@ export async function createJiraTickets(
   };
 
   try {
-    // Step 1: Create the main story
     const storyPayload = {
       fields: {
         project: { key: projectKey },
@@ -195,10 +210,6 @@ export async function createJiraTickets(
       },
     };
 
-    console.log(
-      '[JIRA DEBUG] Creating Story with payload:',
-      JSON.stringify(storyPayload, null, 2)
-    );
     const storyResponse = await fetch(`${url}/rest/api/2/issue`, {
       method: 'POST',
       headers,
@@ -228,14 +239,11 @@ export async function createJiraTickets(
     const storyKey = storyData.key;
     console.log('[JIRA DEBUG] Story created successfully:', storyData);
 
-    // Step 2: Create sub-tasks
-    console.log(`[JIRA DEBUG] Found ${tasks.length} sub-tasks to create.`);
     for (const subtask of tasks) {
       const subtaskSummary = `${projectKey}_${storyNumber}_${subtask.type} ${subtask.name}`;
 
-      // Conditional description for development task
       let subtaskDescription = '';
-      if (subtask.type.startsWith('TDEV')) { // Check if it's a development task by its type prefix
+      if (subtask.type.startsWith('TDEV')) { 
         subtaskDescription = `h2. *Datos de la KB*
 
 * *Nombre:* ${storySummary}
@@ -261,7 +269,6 @@ Se adjunta estimador:`;
         },
       };
 
-      console.log(`[JIRA DEBUG] Creating Sub-task "${subtask.name}"`);
       const subtaskResponse = await fetch(`${url}/rest/api/2/issue`, {
         method: 'POST',
         headers,
@@ -273,7 +280,6 @@ Se adjunta estimador:`;
         console.warn(`[JIRA WARN] Failed to create subtask "${subtask.name}": ${errorData}`);
       }
     }
-    console.log('[JIRA DEBUG] Sub-task creation process finished.');
 
     return {
       success: true,
@@ -497,5 +503,3 @@ export async function getJiraIssueTypes(
     };
   }
 }
-
-    
