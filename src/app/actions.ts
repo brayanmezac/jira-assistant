@@ -31,10 +31,9 @@ export type FormState = {
  * @returns The processed string with the AI content injected or tags removed.
  */
 async function processTemplateWithAI(template: string, context: string): Promise<string> {
-    const aiTagRegex = /<AI\s+([^>]+)\s*\/>/gs; // Use 's' and 'g' flags
+    const aiTagRegex = /<AI\s+([^>]+)\s*\/>/gs;
 
     if (!context.trim()) {
-        // If context is empty, just remove all AI tags
         return template.replace(aiTagRegex, '');
     }
 
@@ -54,7 +53,6 @@ async function processTemplateWithAI(template: string, context: string): Promise
         const prompt = getAttr('prompt');
         const system = getAttr('system');
         
-        // Combine the prompt from the tag with the user-provided context
         const fullPrompt = `${prompt}\n\nContexto:\n\`\`\`\n${context}\n\`\`\``;
 
         try {
@@ -62,12 +60,10 @@ async function processTemplateWithAI(template: string, context: string): Promise
                 prompt: fullPrompt,
                 systemInstruction: system,
             });
-            // Replace the current AI tag with the generated text
             processedTemplate = processedTemplate.replace(fullMatch, aiResult.generatedText);
         } catch (error) {
             console.error("Error during AI tag processing:", error);
             const errorMessage = `[AI Generation Failed: ${error instanceof Error ? error.message : 'Unknown error'}]`;
-            // Replace the tag with an error message to avoid infinite loops on failure
             processedTemplate = processedTemplate.replace(fullMatch, errorMessage);
         }
     }
@@ -122,13 +118,11 @@ export async function generateJiraTicketsAction(
 
     const projectKey = projectInfo.code;
     
-    // Fetch user's task codes
     const allTaskCodes = await getTaskCodes(userId);
 
-    // Filter tasks for the selected project
     const relevantTasks = allTaskCodes.filter(task => 
-      task.status === 'active' && // Must be active
-      (task.projectIds?.length === 0 || !task.projectIds || task.projectIds.includes(projectInfo.id)) // General or specific to this project
+      task.status === 'active' &&
+      (!task.projectIds || task.projectIds.length === 0 || task.projectIds.includes(projectInfo.id))
     );
 
 
@@ -159,7 +153,7 @@ const createJiraTicketsInput = z.object({
   projectKey: z.string(),
   settings: jiraSettingsSchema,
   tasks: z.array(z.any()),
-  aiContext: z.string(), // Added AI context to be passed down
+  aiContext: z.string(),
 });
 
 type CreateJiraTicketsInput = z.infer<typeof createJiraTicketsInput>;
@@ -247,14 +241,11 @@ export async function createJiraTickets(
 
     for (const subtask of tasks) {
       const subtaskSummary = `${projectKey}_${storyNumber}_${subtask.type} ${subtask.name}`;
-
       let subtaskDescription = '';
 
       if (subtask.template) {
-        // If the task has a template, process it
         subtaskDescription = await processTemplateWithAI(subtask.template, aiContext);
       } else if (subtask.type.toLowerCase().includes('tdev')) { 
-        // Fallback for the old hardcoded 'TDEV' logic
         subtaskDescription = `h2. *Datos de la KB*
 
 * *Nombre:* ${storySummary}
