@@ -36,7 +36,6 @@ export function useSettings() {
         const dbSettings = await getUserSettings(user!.uid);
         if (isMounted) {
           // Validate and merge with defaults to ensure all fields are present
-          // The `parse` method will apply the .default() values for any missing fields.
           const validatedSettings = jiraSettingsSchema.parse(dbSettings || {});
           setSettingsState(validatedSettings);
         }
@@ -60,21 +59,20 @@ export function useSettings() {
 
   }, [user]);
 
-  const setSettings = useCallback(async (newSettings: JiraSettings) => {
+  const setSettings = useCallback(async (newSettings: Partial<JiraSettings>) => {
     if (!user) {
         console.error("Cannot save settings, no user is authenticated.");
         return;
     }
 
     try {
-      // The incoming newSettings object from the form should be complete.
-      // We parse it to ensure all defaults are applied and it's valid.
-      const validatedSettings = jiraSettingsSchema.parse(newSettings);
+      // Merge with existing settings to ensure we don't wipe fields
+      const settingsToSave = { ...settings, ...newSettings };
       
-      // Persist to Firestore
+      const validatedSettings = jiraSettingsSchema.parse(settingsToSave);
+      
       await updateUserSettings(user.uid, validatedSettings);
 
-      // Update the local state only after successful save
       setSettingsState(validatedSettings);
 
     } catch (error) {
@@ -83,7 +81,7 @@ export function useSettings() {
         console.error("Zod validation errors:", error.errors);
       }
     }
-  }, [user]);
+  }, [user, settings]);
 
   return { settings, setSettings, loading };
 }

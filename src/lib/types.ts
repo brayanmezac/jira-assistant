@@ -12,8 +12,8 @@ export const jiraSettingsSchema = z.object({
   url: z.string().url({ message: 'Please enter a valid URL.' }).or(z.literal('')).default(''),
   email: z.string().email({ message: 'Please enter a valid email.' }).or(z.literal('')).default(''),
   token: z.string().optional().default(''),
-  epicIssueTypeId: z.string().default(''),
-  storyIssueTypeId: z.string().default(''),
+  epicIssueTypeId: z.string().optional().default(''),
+  storyIssueTypeId: z.string().optional().default(''),
   language: z.string().default('en'),
   theme: z.string().default('system'),
 });

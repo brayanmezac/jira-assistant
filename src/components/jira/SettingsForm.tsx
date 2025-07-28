@@ -152,32 +152,39 @@ export function SettingsForm() {
   // Effect to fetch Jira issue types when connection details change and are valid
   useEffect(() => {
     const fetchIssueTypes = async () => {
+      const watchedUrl = form.getValues('url');
+      const watchedEmail = form.getValues('email');
+      const watchedToken = form.getValues('token');
+
       // Only fetch if we have the necessary details
-      if (settings.url && settings.email && settings.token) {
+      if (watchedUrl && watchedEmail && watchedToken) {
         setLoadingIssueTypes(true);
-        const result = await getJiraIssueTypes(settings);
+        const result = await getJiraIssueTypes({
+          url: watchedUrl,
+          email: watchedEmail,
+          token: watchedToken,
+          epicIssueTypeId: '', // not needed for this call
+          storyIssueTypeId: '', // not needed for this call
+          language: 'en', // not needed for this call
+          theme: 'system' // not needed for this call
+        });
         if (result.success && result.issueTypes) {
           setIssueTypes(result.issueTypes);
         } else if (!result.success) {
-          // Don't toast on initial load if fields are just empty
-          if(settings.url && settings.email && settings.token) {
              toast({
                 variant: 'destructive',
                 title: t.fetchTypesErrorTitle,
                 description: result.message || t.fetchTypesErrorDescription,
              });
-          }
         }
         setLoadingIssueTypes(false);
       } else {
-        // Clear issue types if settings are incomplete
         setIssueTypes([]);
       }
     };
-    // We run this effect whenever settings change, as it depends on them
     fetchIssueTypes();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings, toast]);
+  }, [form.watch('url'), form.watch('email'), form.watch('token'), toast]);
 
 
   const onSubmit = async (values: z.infer<typeof jiraSettingsSchema>) => {
