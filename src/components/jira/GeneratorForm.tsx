@@ -213,8 +213,6 @@ export function GeneratorForm({ formAction, initialState }: GeneratorFormProps) 
                         </FormControl>
                         <SelectContent>
                             <SelectItem value="googleai/gemini-1.5-flash-latest">Google Gemini 1.5 Flash</SelectItem>
-                            <SelectItem value="openai/gpt-4o">OpenAI GPT-4o</SelectItem>
-                            <SelectItem value="openai/gpt-3.5-turbo">OpenAI GPT-3.5 Turbo</SelectItem>
                         </SelectContent>
                     </Select>
                     <FormDescription>{t.modelDescription}</FormDescription>
