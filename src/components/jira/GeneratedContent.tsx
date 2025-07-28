@@ -170,7 +170,7 @@ export function GeneratedContent({ storyDescription, storyName, projectKey, stor
         </Card>
       </div>
       <div className="lg:col-span-1">
-        <SubtasksPreview />
+        <SubtasksPreview tasks={tasks} />
         <Card className="mt-8">
           <CardHeader>
             <CardTitle>{t.finalStep}</CardTitle>

@@ -19,7 +19,7 @@ const translations = {
 }
 
 
-export function SubtasksPreview({ tasks }: { tasks: TaskCode[] }) {
+export function SubtasksPreview({ tasks = [] }: { tasks: TaskCode[] }) {
   const [loading, setLoading] = useState(false);
   const { settings } = useSettings();
   const t = translations[settings.language as keyof typeof translations] || translations.en;
