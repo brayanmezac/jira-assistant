@@ -33,6 +33,7 @@ export type FormState = {
 async function processTemplateWithAI(template: string, context: string): Promise<string> {
     const aiTagRegex = /<AI\s+([^>]+)\s*\/>/gs;
 
+    // If context is empty, just strip the AI tags and return the template.
     if (!context.trim()) {
         return template.replace(aiTagRegex, '');
     }
@@ -40,7 +41,8 @@ async function processTemplateWithAI(template: string, context: string): Promise
     let processedTemplate = template;
     const matches = Array.from(template.matchAll(aiTagRegex));
 
-    for (const match of matches) {
+    // Create an array of promises for all AI generations
+    const aiPromises = matches.map(match => {
         const fullMatch = match[0];
         const attrsString = match[1];
 
@@ -55,17 +57,28 @@ async function processTemplateWithAI(template: string, context: string): Promise
         
         const fullPrompt = `${prompt}\n\nContexto:\n\`\`\`\n${context}\n\`\`\``;
 
-        try {
-            const aiResult = await generateText({
-                prompt: fullPrompt,
-                systemInstruction: system,
-            });
-            processedTemplate = processedTemplate.replace(fullMatch, aiResult.generatedText);
-        } catch (error) {
-            console.error("Error during AI tag processing:", error);
+        return generateText({
+            prompt: fullPrompt,
+            systemInstruction: system,
+        }).then(aiResult => ({
+            fullMatch,
+            replacement: aiResult.generatedText,
+        })).catch(error => {
+            console.error("Error during a specific AI tag processing:", error);
             const errorMessage = `[AI Generation Failed: ${error instanceof Error ? error.message : 'Unknown error'}]`;
-            processedTemplate = processedTemplate.replace(fullMatch, errorMessage);
-        }
+            return {
+                fullMatch,
+                replacement: errorMessage
+            };
+        });
+    });
+
+    // Wait for all AI generations to complete
+    const results = await Promise.all(aiPromises);
+
+    // Replace all tags in the template with their corresponding results
+    for (const result of results) {
+        processedTemplate = processedTemplate.replace(result.fullMatch, result.replacement);
     }
 
     return processedTemplate;
@@ -258,22 +271,8 @@ export async function createJiraTickets(
 
       if (subtask.template) {
         subtaskDescription = await processTemplateWithAI(subtask.template, aiContext);
-      } else if (subtask.type.toLowerCase().includes('tdev')) { 
-        subtaskDescription = `h2. *Datos de la KB*
-
-* *Nombre:* ${storySummary}
-* *Genexus:* GX 17 U13
-* *Info:* [Datos KB|https://link.com]
-
-
-***
-
-${storyDescription}
-
-Se adjunta estimador:`;
-      }
-
-
+      } 
+      
       const subtaskPayload = {
         fields: {
           project: { key: projectKey },
