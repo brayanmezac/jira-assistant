@@ -19,7 +19,6 @@ type GeneratedContentProps = {
   storyNumber: number;
   tasks: TaskCode[];
   aiContext: string;
-  model: string;
 };
 
 const translations = {
@@ -88,7 +87,7 @@ function ContentDisplay({ content }: { content: string }) {
   );
 }
 
-export function GeneratedContent({ storyDescription, storyName, projectKey, storyNumber, tasks, aiContext, model }: GeneratedContentProps) {
+export function GeneratedContent({ storyDescription, storyName, projectKey, storyNumber, tasks, aiContext }: GeneratedContentProps) {
   const { toast } = useToast();
   const [isCreating, setIsCreating] = useState(false);
   const { settings } = useSettings();
@@ -118,7 +117,7 @@ export function GeneratedContent({ storyDescription, storyName, projectKey, stor
             settings: settings,
             tasks: tasks,
             aiContext: aiContext,
-            model: model,
+            model: 'googleai/gemini-1.5-flash-latest', // Hardcoded model
         });
 
         if (result.success && result.data) {

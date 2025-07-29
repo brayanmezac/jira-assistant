@@ -152,7 +152,6 @@ export async function generateJiraTicketsAction(
     number: Number(formData.get('number')),
     project: formData.get('project'),
     userId: formData.get('userId'),
-    model: formData.get('model'),
   });
 
   if (!validatedFields.success) {
@@ -163,7 +162,7 @@ export async function generateJiraTicketsAction(
     };
   }
   
-  const { name, description, project, number, userId, model } = validatedFields.data;
+  const { name, description, project, number, userId } = validatedFields.data;
 
   if (!userId) {
     return {
@@ -186,7 +185,7 @@ export async function generateJiraTicketsAction(
     const fullProject = await getProjectCode(projectInfo.id);
     const template = fullProject?.template || description; 
     
-    const selectedModel = model;
+    const selectedModel = 'googleai/gemini-1.5-flash-latest';
     const finalDescription = await processTemplateWithAI(template, description, selectedModel);
 
     const projectKey = projectInfo.code;

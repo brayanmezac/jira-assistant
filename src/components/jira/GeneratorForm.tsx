@@ -48,9 +48,6 @@ const translations = {
         aiContextLabel: 'AI Context',
         aiContextPlaceholder: 'Provide all relevant meeting notes, technical details, or user requirements. This context will be used by the AI tag in your template.',
         aiContextDescription: "This context will be injected into your project's template where you've placed an <AI /> tag.",
-        modelLabel: 'AI Model',
-        modelPlaceholder: 'Select an AI model',
-        modelDescription: 'Choose the generative model to use for content creation.',
         submitButton: 'Prepare for Jira',
         submittingButton: 'Preparing...',
     },
@@ -66,21 +63,10 @@ const translations = {
         aiContextLabel: 'Contexto para la IA',
         aiContextPlaceholder: 'Proporciona todas las notas de reunión, detalles técnicos o requisitos de usuario relevantes. Este contexto será utilizado por la etiqueta AI en tu plantilla.',
         aiContextDescription: 'Este contexto se inyectará en la plantilla de tu proyecto donde hayas colocado una etiqueta <AI />.',
-        modelLabel: 'Modelo de IA',
-        modelPlaceholder: 'Selecciona un modelo de IA',
-        modelDescription: 'Elige el modelo generativo a utilizar para la creación de contenido.',
         submitButton: 'Preparar para Jira',
         submittingButton: 'Preparando...',
     }
 }
-
-const availableModels = [
-    { value: 'googleai/gemini-1.5-flash-latest', label: 'Gemini 1.5 Flash' },
-    { value: 'googleai/gemini-1.5-pro-latest', label: 'Gemini 1.5 Pro' },
-    { value: 'gpt-4o', label: 'OpenAI GPT-4o' },
-    { value: 'gpt-4-turbo', label: 'OpenAI GPT-4 Turbo' },
-]
-
 
 export function GeneratorForm({ formAction }: GeneratorFormProps) {
     const [projects, setProjects] = useState<ProjectCode[]>([]);
@@ -193,31 +179,6 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
                 </FormItem>
               )}
             />
-             <FormField
-                control={form.control}
-                name="model"
-                render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>{t.modelLabel}</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder={t.modelPlaceholder} />
-                                </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                                {availableModels.map(model => (
-                                    <SelectItem key={model.value} value={model.value}>
-                                        {model.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <FormDescription>{t.modelDescription}</FormDescription>
-                        <FormMessage />
-                    </FormItem>
-                )}
-                />
           </CardContent>
           <CardFooter>
             <SubmitButton loadingText={t.submittingButton}>

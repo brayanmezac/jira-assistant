@@ -26,7 +26,7 @@ export function JiraGenerator() {
   );
   const { toast } = useToast();
   const { user } = useAuth();
-  const [formKey, setFormKey] = useState(0);
+  const [formKey, setFormKey] = useState(Date.now());
 
   const form = useForm<z.infer<typeof jiraStoryFormSchema>>({
     resolver: zodResolver(jiraStoryFormSchema),
@@ -36,22 +36,18 @@ export function JiraGenerator() {
       number: undefined,
       project: '',
       userId: user?.uid || '',
-      model: 'googleai/gemini-1.5-flash-latest',
     },
   });
   
-  // Watch for form values to pass to GeneratedContent
   const watchedValues = form.watch();
 
-  // Sync userId to form if it changes and re-key the form to force re-initialization
   useEffect(() => {
     if (user) {
       form.reset({
         ...form.getValues(),
         userId: user.uid,
-        model: 'googleai/gemini-1.5-flash-latest', // Ensure model has a default on reset
       });
-      setFormKey(prevKey => prevKey + 1);
+      setFormKey(Date.now());
     }
   }, [user, form]);
   
@@ -63,8 +59,7 @@ export function JiraGenerator() {
         description: state.message,
       });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state]);
+  }, [state, toast]);
 
   return (
     <FormProvider {...form}>
@@ -77,7 +72,6 @@ export function JiraGenerator() {
           storyNumber={state.data.storyNumber}
           tasks={state.data.tasks}
           aiContext={watchedValues.description || ''}
-          model={watchedValues.model}
         />
       ) : !state.success && state.message && form.formState.isSubmitted && !form.formState.isDirty ? (
         <Alert variant="destructive" className="mt-8">
