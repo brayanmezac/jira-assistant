@@ -12,7 +12,6 @@ import {
 import { getTaskCodes, getProjectCodes, getProjectCode } from '@/lib/firebase';
 import { generateText } from '@/ai/flows/generic-text-generation';
 import { ModelReference } from 'genkit/model';
-import { ai } from '@/ai/genkit';
 
 export type FormState = {
   success: boolean;
@@ -157,7 +156,7 @@ export async function generateJiraTicketsAction(
   });
 
   if (!validatedFields.success) {
-    const errorMessages = validatedFields.error.errors.map((e) => e.message).join('. ');
+    const errorMessages = validatedFields.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('. ');
     return {
       success: false,
       message: `Invalid form data: ${errorMessages}. Please check your inputs.`,

@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 export const jiraStoryFormSchema = z.object({
   name: z.string().min(3, { message: 'Story name must be at least 3 characters.' }),
-  description: z.string(), // This is the AI context. Can be empty.
+  description: z.string().nullish().default(''), // AI context can be null and will default to empty string
   number: z.coerce.number({required_error: "Story number is required."}).int().positive({ message: 'Story number must be a positive number.' }),
   project: z.string().nonempty({ message: 'Please select a project.' }),
   userId: z.string().nonempty({ message: 'User ID is required.' }),
