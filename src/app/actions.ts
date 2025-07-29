@@ -106,9 +106,11 @@ async function processTemplateWithAI(template: string, context: string, model: M
     
     try {
         let aiResultText: string;
+        const modelStr = typeof model === 'string' ? model : (model as any).name;
 
-        if (typeof model === 'string' && model.startsWith('gpt-')) {
-            aiResultText = await generateWithOpenAI(model, "You are a JSON generation service. Respond only with valid JSON.", batchPrompt);
+
+        if (modelStr.startsWith('gpt-')) {
+            aiResultText = await generateWithOpenAI(modelStr, "You are a JSON generation service. Respond only with valid JSON.", batchPrompt);
         } else {
              const aiResult = await generateText({
                 model: model,
@@ -155,9 +157,10 @@ export async function generateJiraTicketsAction(
   });
 
   if (!validatedFields.success) {
+    const errorMessages = validatedFields.error.errors.map((e) => e.message).join('. ');
     return {
       success: false,
-      message: 'Invalid form data. Please check your inputs.',
+      message: `Invalid form data: ${errorMessages}. Please check your inputs.`,
     };
   }
   
