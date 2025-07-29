@@ -116,43 +116,62 @@ export function GeneratorForm({ formAction, initialState }: GeneratorFormProps) 
     <Form {...form}>
       <form action={formAction}>
         <input type="hidden" {...form.register('userId')} />
-        <input type="hidden" value="googleai/gemini-1.5-flash-latest" {...form.register('model')} />
         <Card>
           <CardHeader>
             <CardTitle>{t.cardTitle}</CardTitle>
             <CardDescription>{t.cardDescription}</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-6">
-            <FormField
-              control={form.control}
-              name="project"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t.projectLabel}</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    name={field.name}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={t.projectPlaceholder} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {projects.map(project => (
-                        <SelectItem key={project.id} value={project.name}>
-                            {project.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className="grid md:grid-cols-2 gap-6">
-              <FormField
+            <div className="grid md:grid-cols-3 gap-6">
+                <FormField
+                control={form.control}
+                name="project"
+                render={({ field }) => (
+                    <FormItem className='md:col-span-2'>
+                    <FormLabel>{t.projectLabel}</FormLabel>
+                    <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        name={field.name}
+                    >
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder={t.projectPlaceholder} />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {projects.map(project => (
+                            <SelectItem key={project.id} value={project.name}>
+                                {project.name}
+                            </SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="number"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>{t.storyNumberLabel}</FormLabel>
+                        <FormControl>
+                        <Input 
+                            type="number" 
+                            placeholder={t.storyNumberPlaceholder} 
+                            {...field} 
+                            onChange={e => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))}
+                            value={field.value ?? ''}
+                            />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+            </div>
+             <FormField
                 control={form.control}
                 name="name"
                 render={({ field }) => (
@@ -165,26 +184,6 @@ export function GeneratorForm({ formAction, initialState }: GeneratorFormProps) 
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="number"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t.storyNumberLabel}</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        placeholder={t.storyNumberPlaceholder} 
-                        {...field} 
-                        onChange={e => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))}
-                        value={field.value ?? ''}
-                        />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
 
             <FormField
               control={form.control}
@@ -201,6 +200,36 @@ export function GeneratorForm({ formAction, initialState }: GeneratorFormProps) 
                   </FormControl>
                   <FormDescription>
                     {t.aiContextDescription}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="model"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t.modelLabel}</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t.modelPlaceholder} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="googleai/gemini-1.5-flash-latest">
+                        <div className='flex items-center gap-2'>
+                            <Bot />
+                            <span>Gemini 1.5 Flash</span>
+                        </div>
+                      </SelectItem>
+                      {/* Add other models here when available */}
+                    </SelectContent>
+                  </Select>
+                   <FormDescription>
+                    {t.modelDescription}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

@@ -28,7 +28,7 @@ export function JiraGenerator() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [aiContext, setAiContext] = useState('');
-  const [model, setModel] = useState('googleai/gemini-1.5-flash-latest');
+  const [model, setModel] = useState('');
 
   const form = useForm<z.infer<typeof jiraStoryFormSchema>>({
     resolver: zodResolver(jiraStoryFormSchema),
@@ -61,7 +61,7 @@ export function JiraGenerator() {
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state, toast]);
+  }, [state]);
 
   return (
     <FormProvider {...form}>

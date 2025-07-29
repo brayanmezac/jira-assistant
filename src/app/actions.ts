@@ -93,7 +93,10 @@ async function processTemplateWithAI(template: string, context: string, model: M
             systemInstruction: "You are a JSON generation service. Respond only with valid JSON.",
         });
 
-        const parsedResult = JSON.parse(aiResult.generatedText);
+        // Clean the AI response by removing markdown code fences before parsing
+        const cleanedJson = aiResult.generatedText.replace(/^```json\n|```$/g, '');
+        const parsedResult = JSON.parse(cleanedJson);
+
 
         // Replace all tags in the template with their corresponding results
         matches.forEach((match, index) => {
