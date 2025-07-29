@@ -34,7 +34,7 @@ export function JiraGenerator() {
       description: '',
       number: undefined,
       project: '',
-      userId: user?.uid || '',
+      userId: '',
       model: 'googleai/gemini-1.5-flash-latest',
     },
   });
@@ -43,14 +43,9 @@ export function JiraGenerator() {
   const watchedValues = form.watch();
 
   // Sync userId to form if it changes (e.g., after initial load)
-  // And set the model default value explicitly to prevent validation issues.
   useEffect(() => {
     if (user && form.getValues('userId') !== user.uid) {
       form.setValue('userId', user.uid);
-    }
-    // Explicitly set the default model value to ensure it's not null/undefined
-    if (!form.getValues('model')) {
-        form.setValue('model', 'googleai/gemini-1.5-flash-latest');
     }
   }, [user, form]);
   
