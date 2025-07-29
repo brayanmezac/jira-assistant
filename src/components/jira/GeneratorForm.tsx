@@ -125,8 +125,7 @@ function TasksMultiSelect({
                             {availableTasks.map((task) => (
                                 <CommandItem
                                     key={task.id}
-                                    onSelect={(e) => {
-                                        e.preventDefault();
+                                    onSelect={() => {
                                         handleSelect(task.id)
                                     }}
                                     className="flex items-center"
@@ -148,66 +147,68 @@ function TasksMultiSelect({
 }
 
 export function GeneratorForm({ formAction }: GeneratorFormProps) {
-    const [projects, setProjects] = useState<ProjectCode[]>([]);
-    const [allTasks, setAllTasks] = useState<TaskCode[]>([]);
-    const { settings } = useSettings();
-    const { user } = useAuth();
-    const t = translations[settings.language as keyof typeof translations] || translations.en;
+  const [projects, setProjects] = useState<ProjectCode[]>([]);
+  const [allTasks, setAllTasks] = useState<TaskCode[]>([]);
+  const { settings } = useSettings();
+  const { user } = useAuth();
+  const t = translations[settings.language as keyof typeof translations] || translations.en;
     
-    const form = useFormContext<z.infer<typeof jiraStoryFormSchema>>();
-    const { control, watch, setValue } = form;
-    const selectedProject = watch('project');
-    const selectedTaskIds = watch('selectedTasks') || [];
+  const form = useFormContext<z.infer<typeof jiraStoryFormSchema>>();
+  const { control, watch, setValue } = form;
+  const selectedProject = watch('project');
+  const selectedTaskIds = watch('selectedTasks') || [];
 
-    const availableTasks = useMemo(() => {
-        if (!selectedProject || !projects.length) return [];
-        const projectInfo = projects.find(p => p.name === selectedProject);
-        if (!projectInfo) return [];
+  const availableTasks = useMemo(() => {
+      if (!selectedProject || !projects.length) return [];
+      const projectInfo = projects.find(p => p.name === selectedProject);
+      if (!projectInfo) return [];
 
-        return allTasks.filter(task => {
-             const isRelevantForProject = !task.projectIds || task.projectIds.length === 0 || task.projectIds.includes(projectInfo.id);
-             const isActiveOrOptional = task.status === 'active' || task.status === 'optional';
-             return isRelevantForProject && isActiveOrOptional;
-        });
-    }, [selectedProject, allTasks, projects]);
+      return allTasks.filter(task => {
+            const isRelevantForProject = !task.projectIds || task.projectIds.length === 0 || task.projectIds.includes(projectInfo.id);
+            const isActiveOrOptional = task.status === 'active' || task.status === 'optional';
+            return isRelevantForProject && isActiveOrOptional;
+      });
+  }, [selectedProject, allTasks, projects]);
+
+  useEffect(() => {
+      if (!user) return;
+      const fetchProjectsAndTasks = async () => {
+          const [projectList, taskList] = await Promise.all([
+              getProjectCodes(user.uid),
+              getTaskCodes(user.uid)
+          ]);
+          setProjects(projectList);
+          setAllTasks(taskList);
+      };
+      fetchProjectsAndTasks();
+  }, [user]);
 
     useEffect(() => {
-        if (!user) return;
-        const fetchProjectsAndTasks = async () => {
-            const [projectList, taskList] = await Promise.all([
-                getProjectCodes(user.uid),
-                getTaskCodes(user.uid)
-            ]);
-            setProjects(projectList);
-            setAllTasks(taskList);
-        };
-        fetchProjectsAndTasks();
-    }, [user]);
-
-     useEffect(() => {
-        // When available tasks change (e.g., after selecting a project),
-        // initialize the selected tasks to all active ones.
+      // When available tasks change (e.g., after selecting a project),
+      // initialize the selected tasks to all active ones.
+      if (availableTasks.length > 0) {
         const activeTaskIds = availableTasks.filter(t => t.status === 'active').map(t => t.id);
         setValue('selectedTasks', activeTaskIds);
-    }, [availableTasks, setValue]);
+      }
+  }, [availableTasks, setValue]);
 
 
-    const tasksToDisplay = useMemo(() => {
-        return availableTasks
-            .map(task => {
-                const isSelected = selectedTaskIds.includes(task.id);
-                if (task.status === 'active') {
-                    // Show active tasks: normal if selected, strikethrough if deselected
-                    return { id: task.id, type: task.type, display: isSelected ? 'normal' : 'strike' };
-                }
-                if (task.status === 'optional' && isSelected) {
-                    // Show optional tasks only if they are selected
-                    return { id: task.id, type: task.type, display: 'normal' };
-                }
-                return null;
-            })
-            .filter((task): task is { id: string; type: string; display: 'normal' | 'strike' } => task !== null);
-    }, [availableTasks, selectedTaskIds]);
+  const tasksToDisplay = useMemo(() => {
+    return availableTasks
+        .map(task => {
+            const isSelected = selectedTaskIds.includes(task.id);
+            if (task.status === 'active') {
+                // Show active tasks: normal if selected, strikethrough if deselected
+                return { id: task.id, type: task.type, display: isSelected ? 'normal' : 'strike' };
+            }
+            if (task.status === 'optional' && isSelected) {
+                // Show optional tasks only if they are selected
+                return { id: task.id, type: task.type, display: 'normal' };
+            }
+            return null;
+        })
+        .filter((task): task is { id: string; type: string; display: 'normal' | 'strike' } => task !== null);
+}, [availableTasks, selectedTaskIds]);
 
   return (
     <Form {...form}>
@@ -231,8 +232,8 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
                     <Select
                         onValueChange={(value) => {
                             field.onChange(value);
-                            // Reset tasks when project changes - this will trigger the useEffect above
-                             setValue('selectedTasks', []);
+                            // Reset tasks when project changes
+                            setValue('selectedTasks', []);
                         }}
                         defaultValue={field.value}
                         name={field.name}
