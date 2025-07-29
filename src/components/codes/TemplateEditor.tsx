@@ -93,7 +93,7 @@ function renderJiraMarkup(text: string): string {
         .replace(/{{(.*?)}}/g, '<code>$1</code>')
         .replace(/^bq\.\s*(.*)/gm, '<blockquote>$1</blockquote>')
         .replace(/^\*\s*(.*)/gm, '<ul><li>$1</li></ul>')
-        .replace(/^#\s*(.*)/gm, '<ol><li>$1</li></ol>')
+        .replace(/^#\s*(.*)/gm, '<ol><li>$1</li></ul>')
         .replace(/\[(.*?)\|(.*?)\]/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
         .replace(/!([^!]+)!/g, '<img src="$1" alt="Jira Image" class="max-w-full h-auto" />')
         .replace(/\\\\/g, '<br/>')
@@ -108,10 +108,10 @@ interface TemplateEditorProps {
     onTemplateChange: (template: string) => void;
     onSave: () => void;
     saving: boolean;
-    lang: 'en' | 'es';
+    lang?: 'en' | 'es';
 }
 
-export function TemplateEditor({ template, onTemplateChange, onSave, saving, lang }: TemplateEditorProps) {
+export function TemplateEditor({ template, onTemplateChange, onSave, saving, lang = 'en' }: TemplateEditorProps) {
     const t = translations[lang];
 
     return (
