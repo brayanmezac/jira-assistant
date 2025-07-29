@@ -2,6 +2,7 @@
 'use server';
 
 import { z } from 'zod';
+import OpenAI from 'openai';
 import {
   jiraStoryFormSchema,
   jiraSettingsSchema,
@@ -24,6 +25,23 @@ export type FormState = {
     tasks: TaskCode[];
   };
 };
+
+const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+});
+
+async function generateWithOpenAI(model: string, system: string, prompt: string): Promise<string> {
+    const response = await openai.chat.completions.create({
+        model: model,
+        messages: [
+            { role: 'system', content: system },
+            { role: 'user', content: prompt }
+        ],
+        temperature: 0.7,
+    });
+    return response.choices[0].message.content || '';
+}
+
 
 /**
  * Processes a template string, finding all <AI> tags and replacing them with AI-generated content
@@ -87,14 +105,21 @@ async function processTemplateWithAI(template: string, context: string, model: M
     `;
     
     try {
-        const aiResult = await generateText({
-            model: model,
-            prompt: batchPrompt,
-            systemInstruction: "You are a JSON generation service. Respond only with valid JSON.",
-        });
+        let aiResultText: string;
+
+        if (typeof model === 'string' && model.startsWith('gpt-')) {
+            aiResultText = await generateWithOpenAI(model, "You are a JSON generation service. Respond only with valid JSON.", batchPrompt);
+        } else {
+             const aiResult = await generateText({
+                model: model,
+                prompt: batchPrompt,
+                systemInstruction: "You are a JSON generation service. Respond only with valid JSON.",
+            });
+            aiResultText = aiResult.generatedText;
+        }
 
         // Clean the AI response by removing markdown code fences before parsing
-        const cleanedJson = aiResult.generatedText.replace(/^```json\n|```$/g, '');
+        const cleanedJson = aiResultText.replace(/^```json\n|```$/g, '');
         const parsedResult = JSON.parse(cleanedJson);
 
 
