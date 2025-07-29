@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useActionState, useEffect } from 'react';
+import { useActionState, useEffect, useState } from 'react';
 import { generateJiraTicketsAction, type FormState } from '@/app/actions';
 import { GeneratorForm } from './GeneratorForm';
 import { GeneratedContent } from './GeneratedContent';
@@ -26,6 +26,7 @@ export function JiraGenerator() {
   );
   const { toast } = useToast();
   const { user } = useAuth();
+  const [formKey, setFormKey] = useState(0);
 
   const form = useForm<z.infer<typeof jiraStoryFormSchema>>({
     resolver: zodResolver(jiraStoryFormSchema),
@@ -34,7 +35,7 @@ export function JiraGenerator() {
       description: '',
       number: undefined,
       project: '',
-      userId: '',
+      userId: user?.uid || '',
       model: 'googleai/gemini-1.5-flash-latest',
     },
   });
@@ -42,21 +43,23 @@ export function JiraGenerator() {
   // Watch for form values to pass to GeneratedContent
   const watchedValues = form.watch();
 
-  // Sync userId to form if it changes (e.g., after initial load)
+  // Sync userId to form if it changes and re-key the form to force re-initialization
   useEffect(() => {
-    if (user && form.getValues('userId') !== user.uid) {
-      form.setValue('userId', user.uid);
+    if (user) {
+      form.reset({
+        ...form.getValues(),
+        userId: user.uid,
+        model: 'googleai/gemini-1.5-flash-latest', // Ensure model has a default on reset
+      });
+      setFormKey(prevKey => prevKey + 1);
     }
   }, [user, form]);
   
   useEffect(() => {
     if (state && !state.success && state.message) {
-      // Don't show toast if form is dirty, as RHF will show field errors
-      if (form.formState.isSubmitted && form.formState.isDirty) return;
-      
       toast({
         variant: 'destructive',
-        title: 'An error occurred',
+        title: 'Preparation Failed',
         description: state.message,
       });
     }
@@ -65,7 +68,7 @@ export function JiraGenerator() {
 
   return (
     <FormProvider {...form}>
-      <GeneratorForm formAction={formAction} />
+      <GeneratorForm formAction={formAction} key={formKey} />
       {state.success && state.data ? (
         <GeneratedContent
           storyDescription={state.data.storyDescription}
