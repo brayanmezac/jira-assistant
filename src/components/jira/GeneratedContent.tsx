@@ -117,7 +117,6 @@ export function GeneratedContent({ storyDescription, storyName, projectKey, stor
             settings: settings,
             tasks: tasks,
             aiContext: aiContext,
-            model: 'googleai/gemini-1.5-flash-latest', // Hardcoded model
         });
 
         if (result.success && result.data) {
@@ -199,3 +198,5 @@ export function GeneratedContent({ storyDescription, storyName, projectKey, stor
     </div>
   );
 }
+
+    

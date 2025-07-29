@@ -10,8 +10,6 @@ import {
   type TaskCode,
 } from '@/lib/types';
 import { getTaskCodes, getProjectCodes, getProjectCode } from '@/lib/firebase';
-import { generateText } from '@/ai/flows/generic-text-generation';
-import { ModelReference } from 'genkit/model';
 
 export type FormState = {
   success: boolean;
@@ -48,10 +46,9 @@ async function generateWithOpenAI(model: string, system: string, prompt: string)
  * If the context is empty, it removes the AI tags instead of calling the AI.
  * @param template The template string to process.
  * @param context The user-provided context to inject into the AI prompt. Can be empty.
- * @param model The AI model to use.
  * @returns The processed string with the AI content injected or tags removed.
  */
-async function processTemplateWithAI(template: string, context: string, model: ModelReference | string): Promise<string> {
+async function processTemplateWithAI(template: string, context: string): Promise<string> {
     const aiTagRegex = /<AI\s+([^>]+)\s*\/>/gs;
 
     // If context is empty, just strip the AI tags and return the template.
@@ -104,20 +101,7 @@ async function processTemplateWithAI(template: string, context: string, model: M
     `;
     
     try {
-        let aiResultText: string;
-        const modelStr = typeof model === 'string' ? model : (model as any).name;
-
-
-        if (modelStr.startsWith('gpt-')) {
-            aiResultText = await generateWithOpenAI(modelStr, "You are a JSON generation service. Respond only with valid JSON.", batchPrompt);
-        } else {
-             const aiResult = await generateText({
-                model: model,
-                prompt: batchPrompt,
-                systemInstruction: "You are a JSON generation service. Respond only with valid JSON.",
-            });
-            aiResultText = aiResult.generatedText;
-        }
+        const aiResultText = await generateWithOpenAI("gpt-4o", "You are a JSON generation service. Respond only with valid JSON.", batchPrompt);
 
         // Clean the AI response by removing markdown code fences before parsing
         const cleanedJson = aiResultText.replace(/^```json\n|```$/g, '');
@@ -185,8 +169,7 @@ export async function generateJiraTicketsAction(
     const fullProject = await getProjectCode(projectInfo.id);
     const template = fullProject?.template || description; 
     
-    const selectedModel = 'googleai/gemini-1.5-flash-latest';
-    const finalDescription = await processTemplateWithAI(template, description, selectedModel);
+    const finalDescription = await processTemplateWithAI(template, description || '');
 
     const projectKey = projectInfo.code;
     
@@ -239,7 +222,6 @@ const createJiraTicketsInput = z.object({
   settings: jiraSettingsSchema,
   tasks: z.array(z.any()),
   aiContext: z.string(),
-  model: z.string(),
 });
 
 type CreateJiraTicketsInput = z.infer<typeof createJiraTicketsInput>;
@@ -263,7 +245,6 @@ export async function createJiraTickets(
     settings,
     tasks,
     aiContext,
-    model,
   } = input;
   const { url, email, token, storyIssueTypeId } = settings;
 
@@ -326,14 +307,12 @@ export async function createJiraTickets(
     const storyKey = storyData.key;
     console.log('[JIRA DEBUG] Story created successfully:', storyData);
     
-    const selectedModel = model;
-
     for (const subtask of tasks) {
       const subtaskSummary = `${projectKey}_${storyNumber}_${subtask.type} ${subtask.name}`;
       let subtaskDescription = '';
 
       if (subtask.template) {
-        subtaskDescription = await processTemplateWithAI(subtask.template, aiContext, selectedModel);
+        subtaskDescription = await processTemplateWithAI(subtask.template, aiContext);
       } 
       
       const subtaskPayload = {
@@ -580,3 +559,5 @@ export async function getJiraIssueTypes(
     };
   }
 }
+
+    
