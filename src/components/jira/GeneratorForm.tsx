@@ -193,16 +193,20 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
 
 
     const tasksToDisplay = useMemo(() => {
-        return availableTasks.map(task => {
-            const isSelected = selectedTaskIds.includes(task.id);
-            if (task.status === 'active') {
-                return { type: task.type, display: isSelected ? 'normal' : 'strike' };
-            }
-            if (task.status === 'optional' && isSelected) {
-                return { type: task.type, display: 'normal' };
-            }
-            return null;
-        }).filter(Boolean);
+        return availableTasks
+            .map(task => {
+                const isSelected = selectedTaskIds.includes(task.id);
+                if (task.status === 'active') {
+                    // Show active tasks: normal if selected, strikethrough if deselected
+                    return { id: task.id, type: task.type, display: isSelected ? 'normal' : 'strike' };
+                }
+                if (task.status === 'optional' && isSelected) {
+                    // Show optional tasks only if they are selected
+                    return { id: task.id, type: task.type, display: 'normal' };
+                }
+                return null;
+            })
+            .filter((task): task is { id: string; type: string; display: 'normal' | 'strike' } => task !== null);
     }, [availableTasks, selectedTaskIds]);
 
   return (
@@ -227,7 +231,7 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
                     <Select
                         onValueChange={(value) => {
                             field.onChange(value);
-                            // Reset tasks when project changes
+                            // Reset tasks when project changes - this will trigger the useEffect above
                              setValue('selectedTasks', []);
                         }}
                         defaultValue={field.value}
@@ -303,12 +307,10 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
                 />
                 <div className='md:col-span-2 flex items-end'>
                     <div className='flex flex-wrap gap-2 p-2 border rounded-md w-full min-h-[40px]'>
-                         {tasksToDisplay.map((task, index) => (
-                            task && (
-                                <Badge key={index} variant="secondary" className={cn(task.display === 'strike' && 'line-through')}>
-                                    {task.type}
-                                </Badge>
-                            )
+                         {tasksToDisplay.map((task) => (
+                            <Badge key={task.id} variant="secondary" className={cn(task.display === 'strike' && 'line-through text-muted-foreground')}>
+                                {task.type}
+                            </Badge>
                         ))}
                     </div>
                 </div>
