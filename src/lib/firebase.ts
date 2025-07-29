@@ -75,9 +75,12 @@ export async function deleteProjectCode(id: string) {
 
 // Task Codes - User-specific
 export async function getTaskCodes(userId: string): Promise<TaskCode[]> {
-    const q = query(collection(db, 'taskCodes'), where('userId', '==', userId), orderBy('order'));
+    const q = query(collection(db, 'taskCodes'), where('userId', '==', userId));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => docToTyped<TaskCode>(doc));
+    const tasks = snapshot.docs.map(doc => docToTyped<TaskCode>(doc));
+    // Sort in-memory to avoid needing a composite index
+    tasks.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    return tasks;
 }
 
 export async function getTaskCode(id: string): Promise<TaskCode | null> {
@@ -91,9 +94,10 @@ export async function getTaskCode(id: string): Promise<TaskCode | null> {
 
 export async function addTaskCode(taskData: WithFieldValue<Omit<TaskCode, 'id'>>): Promise<TaskCode> {
     const collectionRef = collection(db, 'taskCodes');
-    const q = query(collectionRef, where('userId', '==', taskData.userId), orderBy('order', 'desc'), where('order', '!=', null));
-    const snapshot = await getDocs(q);
-    const lastOrder = snapshot.docs.length > 0 ? (snapshot.docs[0].data().order as number) : -1;
+    
+    // Get all tasks for the user to calculate the next order number, avoiding a complex query.
+    const tasks = await getTaskCodes(taskData.userId);
+    const lastOrder = tasks.length > 0 ? Math.max(...tasks.map(t => t.order || 0)) : -1;
     
     const dataWithOrder = { ...taskData, order: lastOrder + 1 };
     
@@ -121,3 +125,4 @@ export async function deleteTaskCode(id: string) {
     const docRef = doc(db, 'taskCodes', id);
     await deleteDoc(docRef);
 }
+
