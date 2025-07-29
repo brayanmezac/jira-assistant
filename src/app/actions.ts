@@ -156,7 +156,7 @@ export async function generateJiraTicketsAction(
     const fullProject = await getProjectCode(projectInfo.id);
     const template = fullProject?.template || description; 
     
-    const selectedModel = ai.model(model);
+    const selectedModel = model;
     const finalDescription = await processTemplateWithAI(template, description, selectedModel);
 
     const projectKey = projectInfo.code;
@@ -297,7 +297,7 @@ export async function createJiraTickets(
     const storyKey = storyData.key;
     console.log('[JIRA DEBUG] Story created successfully:', storyData);
     
-    const selectedModel = ai.model(model);
+    const selectedModel = model;
 
     for (const subtask of tasks) {
       const subtaskSummary = `${projectKey}_${storyNumber}_${subtask.type} ${subtask.name}`;
