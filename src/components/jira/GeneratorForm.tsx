@@ -1,8 +1,7 @@
 
 'use client';
 
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { useFormContext } from 'react-hook-form';
 import type { z } from 'zod';
 import { jiraStoryFormSchema, type ProjectCode } from '@/lib/types';
 import { useEffect, useState } from 'react';
@@ -34,7 +33,6 @@ import { useAuth } from '../auth/AuthProvider';
 
 type GeneratorFormProps = {
   formAction: (payload: FormData) => void;
-  initialState: any;
 };
 
 const translations = {
@@ -77,11 +75,13 @@ const translations = {
 }
 
 
-export function GeneratorForm({ formAction, initialState }: GeneratorFormProps) {
+export function GeneratorForm({ formAction }: GeneratorFormProps) {
     const [projects, setProjects] = useState<ProjectCode[]>([]);
     const { settings } = useSettings();
     const { user } = useAuth();
     const t = translations[settings.language as keyof typeof translations] || translations.en;
+    
+    const form = useFormContext<z.infer<typeof jiraStoryFormSchema>>();
 
     useEffect(() => {
         if (!user) return;
@@ -91,19 +91,6 @@ export function GeneratorForm({ formAction, initialState }: GeneratorFormProps) 
         };
         fetchProjects();
     }, [user]);
-
-  const form = useForm<z.infer<typeof jiraStoryFormSchema>>({
-    resolver: zodResolver(jiraStoryFormSchema),
-    defaultValues: {
-      name: '',
-      description: '',
-      number: undefined,
-      project: '',
-      userId: user?.uid || '',
-      model: 'googleai/gemini-1.5-flash-latest',
-    },
-    context: initialState,
-  });
 
   // Sync userId to form if it changes
   useEffect(() => {

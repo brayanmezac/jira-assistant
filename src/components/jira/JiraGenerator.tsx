@@ -1,11 +1,10 @@
 
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useEffect } from 'react';
 import { generateJiraTicketsAction, type FormState } from '@/app/actions';
 import { GeneratorForm } from './GeneratorForm';
 import { GeneratedContent } from './GeneratedContent';
-import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { AlertTriangle } from 'lucide-react';
@@ -27,8 +26,6 @@ export function JiraGenerator() {
   );
   const { toast } = useToast();
   const { user } = useAuth();
-  const [aiContext, setAiContext] = useState('');
-  const [model, setModel] = useState('');
 
   const form = useForm<z.infer<typeof jiraStoryFormSchema>>({
     resolver: zodResolver(jiraStoryFormSchema),
@@ -40,7 +37,12 @@ export function JiraGenerator() {
       userId: user?.uid || '',
       model: 'googleai/gemini-1.5-flash-latest',
     },
+    context: state,
   });
+  
+  // Watch for form values
+  const watchedDescription = form.watch('description');
+  const watchedModel = form.watch('model');
 
   useEffect(() => {
     if (user) {
@@ -49,10 +51,6 @@ export function JiraGenerator() {
   }, [user, form]);
   
   useEffect(() => {
-    if (state?.success && state.data) {
-        setAiContext(form.getValues('description'));
-        setModel(form.getValues('model'));
-    }
     if (state && !state.success && state.message) {
       toast({
         variant: 'destructive',
@@ -65,7 +63,7 @@ export function JiraGenerator() {
 
   return (
     <FormProvider {...form}>
-      <GeneratorForm formAction={formAction} initialState={initialState} />
+      <GeneratorForm formAction={formAction} />
       {state.success && state.data ? (
         <GeneratedContent
           storyDescription={state.data.storyDescription}
@@ -73,10 +71,10 @@ export function JiraGenerator() {
           projectKey={state.data.projectKey}
           storyNumber={state.data.storyNumber}
           tasks={state.data.tasks}
-          aiContext={aiContext}
-          model={model}
+          aiContext={watchedDescription}
+          model={watchedModel}
         />
-      ) : !state.success && state.message ? (
+      ) : !state.success && state.message && !form.formState.isDirty ? (
         <Alert variant="destructive" className="mt-8">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Preparation Failed</AlertTitle>
