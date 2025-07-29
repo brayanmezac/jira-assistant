@@ -109,7 +109,7 @@
 
 
 /* Animation for chat-like appearance */
-@keyframes-animate-in {
+@keyframes keyframes-animate-in {
   from {
     opacity: 0;
     transform: translateY(10px);
@@ -123,4 +123,30 @@
 .animate-in-chat {
   animation: keyframes-animate-in 0.3s ease-out forwards;
 }
+
+@keyframes glare-effect {
+  0% {
+    transform: translate(-150%, -150%) rotate(45deg);
+  }
+  100% {
+    transform: translate(50%, 50%) rotate(45deg);
+  }
+}
+
+.textarea-glare {
+    @apply relative overflow-hidden rounded-md;
+}
+
+.textarea-glare:focus-within::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.2), transparent 30%);
+    animation: glare-effect 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+    pointer-events: none;
+}
+
 

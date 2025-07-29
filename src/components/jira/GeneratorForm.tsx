@@ -184,8 +184,6 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
   }, [user]);
 
   useEffect(() => {
-    // When available tasks change (e.g., after selecting a project),
-    // initialize the selected tasks to all active ones.
     const activeTaskIds = availableTasks
         .filter(t => t.status === 'active')
         .map(t => t.id);
@@ -322,11 +320,13 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
                 <FormItem>
                   <FormLabel>{t.aiContextLabel}</FormLabel>
                   <FormControl>
-                    <Textarea
-                      placeholder={t.aiContextPlaceholder}
-                      className="min-h-40 transition-all duration-300 focus-visible:shadow-[0_0_15px_hsl(var(--primary)/0.5)]"
-                      {...field}
-                    />
+                    <div className="textarea-glare">
+                        <Textarea
+                        placeholder={t.aiContextPlaceholder}
+                        className="min-h-40 transition-all duration-300 focus-visible:shadow-[0_0_15px_hsl(var(--primary)/0.5)] focus-visible:ring-primary"
+                        {...field}
+                        />
+                    </div>
                   </FormControl>
                   <FormDescription>
                     {t.aiContextDescription}
