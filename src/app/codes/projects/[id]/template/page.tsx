@@ -139,7 +139,7 @@ export default function EditTemplatePage() {
             onTemplateChange={setTemplate}
             onSave={handleSave}
             saving={saving}
-            lang={settings.language as 'en' | 'es'}
+            lang={(settings.language as 'en' | 'es') || 'en'}
         />
       )}
     </div>
