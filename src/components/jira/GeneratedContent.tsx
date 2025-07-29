@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { CheckCircle, Clipboard, Loader2 } from 'lucide-react';
@@ -10,7 +10,6 @@ import { SubtasksPreview } from './SubtasksPreview';
 import { useSettings } from '@/hooks/use-settings';
 import { createJiraTickets } from '@/app/actions';
 import type { TaskCode } from '@/lib/types';
-import { useFormContext } from 'react-hook-form';
 import { renderJiraMarkup } from '@/lib/jira-markup-renderer';
 
 type GeneratedContentProps = {
@@ -59,27 +58,16 @@ const translations = {
     }
 };
 
-function ContentDisplay({ content }: { content: string }) {
-  const [copied, setCopied] = useState(false);
-  const { settings } = useSettings();
-  const t = translations[settings.language as keyof typeof translations] || translations.en;
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(content);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
+function ContentDisplay({ content, onCopy }: { content: string, onCopy: () => void }) {
   return (
     <div className="relative">
       <Button
         variant="ghost"
         size="icon"
         className="absolute top-2 right-2 h-7 w-7"
-        onClick={handleCopy}
+        onClick={onCopy}
       >
-        {copied ? <CheckCircle className="text-green-500" /> : <Clipboard />}
-        <span className="sr-only">{t.copy}</span>
+        <Clipboard />
       </Button>
       <div 
         className="prose prose-sm dark:prose-invert max-w-none rounded-md border bg-muted/50 p-4 h-96 overflow-auto"
@@ -95,6 +83,70 @@ export function GeneratedContent({ storyDescription, storyName, projectKey, stor
   const { settings } = useSettings();
   const t = translations[settings.language as keyof typeof translations] || translations.en;
   
+  // State for progressive rendering
+  const [showStory, setShowStory] = useState(false);
+  const [showSubtasks, setShowSubtasks] = useState(false);
+  const [visibleTasks, setVisibleTasks] = useState<TaskCode[]>([]);
+  const [showFinalStep, setShowFinalStep] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const autoScroll = () => {
+    setTimeout(() => {
+        window.scrollTo({
+            top: document.body.scrollHeight,
+            behavior: 'smooth',
+        });
+    }, 100);
+  };
+  
+  useEffect(() => {
+    // Preload audio
+    audioRef.current = new Audio('/ping.mp3');
+  }, []);
+
+  useEffect(() => {
+    const timeouts: NodeJS.Timeout[] = [];
+
+    // Reset states on new generation
+    setShowStory(false);
+    setShowSubtasks(false);
+    setVisibleTasks([]);
+    setShowFinalStep(false);
+
+    // 1. Show Story Card
+    timeouts.push(setTimeout(() => {
+      setShowStory(true);
+      autoScroll();
+    }, 500));
+
+    // 2. Show Subtasks Card
+    timeouts.push(setTimeout(() => {
+      setShowSubtasks(true);
+      autoScroll();
+    }, 1000));
+
+    // 3. Show Subtasks one by one
+    tasks.forEach((task, index) => {
+      timeouts.push(setTimeout(() => {
+        setVisibleTasks(prev => [...prev, task]);
+        autoScroll();
+      }, 1500 + index * 400));
+    });
+
+    // 4. Show Final Step and play sound
+    timeouts.push(setTimeout(() => {
+      setShowFinalStep(true);
+      audioRef.current?.play().catch(e => console.error("Audio play failed:", e));
+      autoScroll();
+    }, 1500 + tasks.length * 400 + 300));
+
+    return () => {
+      timeouts.forEach(clearTimeout);
+    };
+  }, [storyDescription, tasks]);
+
+
   const handleCreateInJira = async () => {
     setIsCreating(true);
     
@@ -158,44 +210,57 @@ export function GeneratedContent({ storyDescription, storyName, projectKey, stor
         setIsCreating(false);
     }
   };
+  
+  const handleCopy = (content: string) => {
+    navigator.clipboard.writeText(content);
+    toast({
+        title: 'Copied to clipboard!',
+    });
+  };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
-      <div className="lg:col-span-2">
-         <Card>
-            <CardHeader>
-            <CardTitle>{t.devStoryContent}</CardTitle>
-            <CardDescription>
-                {t.devStoryDescription}
-            </CardDescription>
-            </CardHeader>
-            <CardContent>
-            <ContentDisplay content={storyDescription} />
-            </CardContent>
-        </Card>
+    <div ref={containerRef} className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
+      <div className="lg:col-span-2 space-y-8">
+        {showStory && (
+            <Card className="animate-in-chat">
+                <CardHeader>
+                <CardTitle>{t.devStoryContent}</CardTitle>
+                <CardDescription>
+                    {t.devStoryDescription}
+                </CardDescription>
+                </CardHeader>
+                <CardContent>
+                <ContentDisplay content={storyDescription} onCopy={() => handleCopy(storyDescription)} />
+                </CardContent>
+            </Card>
+        )}
       </div>
-      <div className="lg:col-span-1">
-        <SubtasksPreview tasks={tasks || []} />
-        <Card className="mt-8">
-          <CardHeader>
-            <CardTitle>{t.finalStep}</CardTitle>
-            <CardDescription>
-              {t.finalStepDescription}
-            </CardDescription>
-          </CardHeader>
-          <CardFooter>
-            <Button className="w-full" onClick={handleCreateInJira} disabled={isCreating}>
-              {isCreating ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {t.creatingInJira}
-                </>
-              ) : (
-                t.createInJira
-              )}
-            </Button>
-          </CardFooter>
-        </Card>
+
+      <div className="lg:col-span-1 space-y-8">
+        {showSubtasks && <SubtasksPreview tasks={visibleTasks} />}
+        
+        {showFinalStep && (
+            <Card className="animate-in-chat">
+            <CardHeader>
+                <CardTitle>{t.finalStep}</CardTitle>
+                <CardDescription>
+                {t.finalStepDescription}
+                </CardDescription>
+            </CardHeader>
+            <CardFooter>
+                <Button className="w-full" onClick={handleCreateInJira} disabled={isCreating}>
+                {isCreating ? (
+                    <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {t.creatingInJira}
+                    </>
+                ) : (
+                    t.createInJira
+                )}
+                </Button>
+            </CardFooter>
+            </Card>
+        )}
       </div>
     </div>
   );
