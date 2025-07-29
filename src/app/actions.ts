@@ -135,6 +135,7 @@ export async function generateJiraTicketsAction(
     number: Number(formData.get('number')),
     project: formData.get('project'),
     userId: formData.get('userId'),
+    selectedTasks: formData.getAll('selectedTasks'),
   });
 
   if (!validatedFields.success) {
@@ -145,7 +146,7 @@ export async function generateJiraTicketsAction(
     };
   }
   
-  const { name, description, project, number, userId } = validatedFields.data;
+  const { name, description, project, number, userId, selectedTasks } = validatedFields.data;
   const aiContext = description || '';
 
   if (!userId) {
@@ -176,7 +177,7 @@ export async function generateJiraTicketsAction(
     const allTaskCodes = await getTaskCodes(userId);
 
     const relevantTasks = allTaskCodes.filter(task => 
-      task.status === 'active' &&
+      selectedTasks.includes(task.id) &&
       (!task.projectIds || task.projectIds.length === 0 || task.projectIds.includes(projectInfo.id))
     );
 

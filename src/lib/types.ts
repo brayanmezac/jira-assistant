@@ -7,6 +7,7 @@ export const jiraStoryFormSchema = z.object({
   number: z.coerce.number({required_error: "Story number is required."}).int().positive({ message: 'Story number must be a positive number.' }),
   project: z.string().nonempty({ message: 'Please select a project.' }),
   userId: z.string().nonempty({ message: 'User ID is required.' }),
+  selectedTasks: z.array(z.string()).optional().default([]),
 });
 
 export const jiraSettingsSchema = z.object({
@@ -35,7 +36,7 @@ export const taskCodeSchema = z.object({
   name: z.string().min(1, { message: 'Name is required.' }),
   type: z.string().min(1, { message: 'Type is required.' }),
   iconUrl: z.string().url().or(z.literal('')).default(''),
-  status: z.enum(['active', 'inactive']).default('active'),
+  status: z.enum(['active', 'inactive', 'optional']).default('active'),
   projectIds: z.array(z.string()).optional().default([]), // Empty array means "General"
   template: z.string().optional(), // Added template field
 });

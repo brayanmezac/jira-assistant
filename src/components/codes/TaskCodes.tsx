@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useRef, useState, useMemo } from 'react';
+import { useRef, useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Pencil, Trash2, Download, Upload, MoreVertical, Power, PowerOff, Check, ChevronsUpDown, Search, FileText } from 'lucide-react';
+import { Loader2, Pencil, Trash2, Download, Upload, MoreVertical, Power, PowerOff, Check, ChevronsUpDown, Search, FileText, HelpCircle } from 'lucide-react';
 import type { TaskCode, ProjectCode } from '@/lib/types';
 import {
   Table,
@@ -78,6 +78,7 @@ const translations = {
         all: 'All',
         active: 'Active',
         inactive: 'Inactive',
+        optional: 'Optional',
         importFromJira: 'Import from Jira',
         importFromJson: 'Import from JSON',
         exportToJson: 'Export to JSON',
@@ -100,6 +101,7 @@ const translations = {
         tableType: 'Type',
         tableCode: 'Code (ID)',
         tableProjects: 'Projects',
+        tableStatus: 'Status',
         tableActions: 'Actions',
         editTemplate: 'Edit Template',
         editTask: 'Edit Task',
@@ -137,6 +139,7 @@ const translations = {
         all: 'Todos',
         active: 'Activo',
         inactive: 'Inactivo',
+        optional: 'Opcional',
         importFromJira: 'Importar desde Jira',
         importFromJson: 'Importar desde JSON',
         exportToJson: 'Exportar a JSON',
@@ -159,6 +162,7 @@ const translations = {
         tableType: 'Tipo',
         tableCode: 'Código (ID)',
         tableProjects: 'Proyectos',
+        tableStatus: 'Estado',
         tableActions: 'Acciones',
         editTemplate: 'Editar Plantilla',
         editTask: 'Editar Tarea',
@@ -367,6 +371,58 @@ function ProjectsMultiSelect({
     );
 }
 
+function StatusButton({ task, onStatusChange }: { task: TaskCode, onStatusChange: (task: TaskCode, newStatus: 'active' | 'inactive' | 'optional') => void }) {
+    const holdTimeout = useRef<NodeJS.Timeout | null>(null);
+    const { settings } = useSettings();
+    const t = translations[settings.language as keyof typeof translations || 'en'];
+
+    const handleMouseDown = () => {
+        holdTimeout.current = setTimeout(() => {
+            onStatusChange(task, 'optional');
+            holdTimeout.current = null;
+        }, 1500); // 1.5 seconds
+    };
+
+    const handleMouseUpOrLeave = () => {
+        if (holdTimeout.current) {
+            clearTimeout(holdTimeout.current);
+            holdTimeout.current = null;
+        }
+    };
+
+    const handleClick = () => {
+        // Only trigger click if it wasn't a hold
+        if (!holdTimeout.current) {
+            const newStatus = task.status === 'active' ? 'inactive' : 'active';
+            onStatusChange(task, newStatus);
+        }
+    };
+
+    const statusMap = {
+        active: { icon: Power, color: 'text-green-500', label: t.active },
+        inactive: { icon: PowerOff, color: 'text-red-500', label: t.inactive },
+        optional: { icon: HelpCircle, color: 'text-amber-500', label: t.optional },
+    };
+
+    const { icon: Icon, color, label } = statusMap[task.status] || statusMap.inactive;
+
+    return (
+        <Button
+            variant="ghost"
+            size="icon"
+            className={`h-8 w-8 ${color}`}
+            onMouseDown={handleMouseDown}
+            onMouseUp={handleMouseUpOrLeave}
+            onMouseLeave={handleMouseUpOrLeave}
+            onClick={handleClick}
+            title={`${t.toggleStatus} (Hold for Optional)`}
+        >
+            <Icon className="h-4 w-4" />
+        </Button>
+    );
+}
+
+
 export function TaskCodes({ initialTasks, userProjects }: { initialTasks: TaskCode[]; userProjects: ProjectCode[] }) {
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
@@ -513,8 +569,7 @@ export function TaskCodes({ initialTasks, userProjects }: { initialTasks: TaskCo
     }
   };
   
-  const handleToggleStatus = async (task: TaskCode) => {
-    const newStatus = task.status === 'active' ? 'inactive' : 'active';
+ const handleStatusChange = async (task: TaskCode, newStatus: 'active' | 'inactive' | 'optional') => {
     try {
         await updateTaskCode(task.id, { status: newStatus });
         setTasks(p => p.map(t => t.id === task.id ? { ...t, status: newStatus } : t));
@@ -524,6 +579,7 @@ export function TaskCodes({ initialTasks, userProjects }: { initialTasks: TaskCo
         toast({ variant: 'destructive', title: `❌ Error updating status`, description: 'An error occurred.' });
     }
   };
+
 
   const handleExport = () => {
     const dataStr = JSON.stringify(tasks.map(({id, userId, ...rest}) => rest), null, 2);
@@ -546,7 +602,7 @@ export function TaskCodes({ initialTasks, userProjects }: { initialTasks: TaskCo
       try {
         const text = e.target?.result;
         const json = JSON.parse(text as string);
-        const tasksToImport = z.array(taskCodeSchema.omit({ userId: true })).parse(json);
+        const tasksToImport = z.array(taskCodeSchema.omit({ userId: true, id: true })).parse(json);
         
         let importedCount = 0;
         for (const task of tasksToImport) {
@@ -667,6 +723,7 @@ export function TaskCodes({ initialTasks, userProjects }: { initialTasks: TaskCo
                         <SelectItem value="all">{t.all}</SelectItem>
                         <SelectItem value="active">{t.active}</SelectItem>
                         <SelectItem value="inactive">{t.inactive}</SelectItem>
+                        <SelectItem value="optional">{t.optional}</SelectItem>
                     </SelectContent>
                 </Select>
             </div>
@@ -701,9 +758,7 @@ export function TaskCodes({ initialTasks, userProjects }: { initialTasks: TaskCo
                         ) : (<Badge variant="outline">{t.general}</Badge>)}
                       </TableCell>
                       <TableCell className="text-right space-x-1">
-                        <Button variant="ghost" size="icon" className='h-8 w-8' onClick={() => handleToggleStatus(task)} title={t.toggleStatus}>
-                            {task.status === 'active' ? <Power className='h-4 w-4 text-green-500'/> : <PowerOff className='h-4 w-4 text-red-500'/>}
-                        </Button>
+                        <StatusButton task={task} onStatusChange={handleStatusChange} />
                         <Button variant="ghost" size="icon" className="h-8 w-8" asChild title={t.editTemplate}>
                             <Link href={`/codes/tasks/${task.id}/template`}>
                                 <FileText className="h-4 w-4" />

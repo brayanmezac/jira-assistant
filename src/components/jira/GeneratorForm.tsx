@@ -1,11 +1,11 @@
 
 'use client';
 
-import { useFormContext } from 'react-hook-form';
+import { useFormContext, Controller } from 'react-hook-form';
 import type { z } from 'zod';
-import { jiraStoryFormSchema, type ProjectCode } from '@/lib/types';
-import { useEffect, useState } from 'react';
-import { getProjectCodes } from '@/lib/firebase';
+import { jiraStoryFormSchema, type ProjectCode, type TaskCode } from '@/lib/types';
+import { useEffect, useState, useMemo } from 'react';
+import { getProjectCodes, getTaskCodes } from '@/lib/firebase';
 
 import {
   Form,
@@ -27,9 +27,15 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription }
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { SubmitButton } from '../SubmitButton';
-import { PencilLine } from 'lucide-react';
+import { PencilLine, ChevronsUpDown, Check } from 'lucide-react';
 import { useSettings } from '@/hooks/use-settings';
 import { useAuth } from '../auth/AuthProvider';
+import { Popover, PopoverTrigger, PopoverContent } from '../ui/popover';
+import { Command, CommandInput, CommandEmpty, CommandList, CommandGroup, CommandItem } from '../ui/command';
+import { Button } from '../ui/button';
+import { cn } from '@/lib/utils';
+import { Badge } from '../ui/badge';
+import { Checkbox } from '../ui/checkbox';
 
 type GeneratorFormProps = {
   formAction: (payload: FormData) => void;
@@ -43,6 +49,8 @@ const translations = {
         projectPlaceholder: 'Select a project',
         storyNameLabel: 'Story Name',
         storyNamePlaceholder: 'e.g., Implement user authentication',
+        tasksLabel: 'Tasks',
+        tasksPlaceholder: 'Select tasks to include',
         storyNumberLabel: 'Story Number',
         storyNumberPlaceholder: 'e.g., 123',
         aiContextLabel: 'AI Context',
@@ -50,6 +58,8 @@ const translations = {
         aiContextDescription: "This context will be injected into your project's template where you've placed an <AI /> tag.",
         submitButton: 'Prepare for Jira',
         submittingButton: 'Preparing...',
+        searchTasks: 'Search tasks...',
+        noTasksFound: 'No tasks found.',
     },
     es: {
         cardTitle: 'Crear Nueva Historia',
@@ -58,6 +68,8 @@ const translations = {
         projectPlaceholder: 'Selecciona un proyecto',
         storyNameLabel: 'Nombre de la Historia',
         storyNamePlaceholder: 'Ej: Implementar autenticación de usuarios',
+        tasksLabel: 'Tareas',
+        tasksPlaceholder: 'Selecciona tareas a incluir',
         storyNumberLabel: 'Número de Historia',
         storyNumberPlaceholder: 'Ej: 123',
         aiContextLabel: 'Contexto para la IA',
@@ -65,30 +77,139 @@ const translations = {
         aiContextDescription: 'Este contexto se inyectará en la plantilla de tu proyecto donde hayas colocado una etiqueta <AI />.',
         submitButton: 'Preparar para Jira',
         submittingButton: 'Preparando...',
+        searchTasks: 'Buscar tareas...',
+        noTasksFound: 'No se encontraron tareas.',
     }
+}
+
+function TasksMultiSelect({
+    availableTasks,
+    selectedTaskIds,
+    onSelectionChange,
+    lang = 'en'
+}: {
+    availableTasks: TaskCode[];
+    selectedTaskIds: string[];
+    onSelectionChange: (ids: string[]) => void;
+    lang: 'en' | 'es';
+}) {
+    const t = translations[lang];
+    const [isOpen, setIsOpen] = useState(false);
+
+    const handleSelect = (taskId: string) => {
+        const newSelection = selectedTaskIds.includes(taskId)
+            ? selectedTaskIds.filter(id => id !== taskId)
+            : [...selectedTaskIds, taskId];
+        onSelectionChange(newSelection);
+    };
+
+    return (
+        <Popover open={isOpen} onOpenChange={setIsOpen}>
+            <PopoverTrigger asChild>
+                <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={isOpen}
+                    className="w-full justify-between"
+                >
+                    <span className='truncate'>{t.tasksPlaceholder}</span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                <Command>
+                    <CommandInput placeholder={t.searchTasks} />
+                    <CommandList>
+                        <CommandEmpty>{t.noTasksFound}</CommandEmpty>
+                        <CommandGroup>
+                            {availableTasks.map((task) => (
+                                <CommandItem
+                                    key={task.id}
+                                    onSelect={(e) => {
+                                        e.preventDefault();
+                                        handleSelect(task.id)
+                                    }}
+                                    className="flex items-center"
+                                >
+                                    <Checkbox
+                                        id={`task-${task.id}`}
+                                        checked={selectedTaskIds.includes(task.id)}
+                                        className="mr-2"
+                                    />
+                                    <label htmlFor={`task-${task.id}`} className="flex-1">{task.name}</label>
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
+    );
 }
 
 export function GeneratorForm({ formAction }: GeneratorFormProps) {
     const [projects, setProjects] = useState<ProjectCode[]>([]);
+    const [allTasks, setAllTasks] = useState<TaskCode[]>([]);
     const { settings } = useSettings();
     const { user } = useAuth();
     const t = translations[settings.language as keyof typeof translations] || translations.en;
     
     const form = useFormContext<z.infer<typeof jiraStoryFormSchema>>();
+    const { control, watch, setValue } = form;
+    const selectedProject = watch('project');
+    const selectedTaskIds = watch('selectedTasks') || [];
+
+    const availableTasks = useMemo(() => {
+        if (!selectedProject || !projects.length) return [];
+        const projectInfo = projects.find(p => p.name === selectedProject);
+        if (!projectInfo) return [];
+
+        return allTasks.filter(task => {
+             const isRelevantForProject = !task.projectIds || task.projectIds.length === 0 || task.projectIds.includes(projectInfo.id);
+             const isActiveOrOptional = task.status === 'active' || task.status === 'optional';
+             return isRelevantForProject && isActiveOrOptional;
+        });
+    }, [selectedProject, allTasks, projects]);
 
     useEffect(() => {
         if (!user) return;
-        const fetchProjects = async () => {
-            const projectList = await getProjectCodes(user.uid);
+        const fetchProjectsAndTasks = async () => {
+            const [projectList, taskList] = await Promise.all([
+                getProjectCodes(user.uid),
+                getTaskCodes(user.uid)
+            ]);
             setProjects(projectList);
+            setAllTasks(taskList);
         };
-        fetchProjects();
+        fetchProjectsAndTasks();
     }, [user]);
+
+     useEffect(() => {
+        // When available tasks change (e.g., after selecting a project),
+        // initialize the selected tasks to all active ones.
+        const activeTaskIds = availableTasks.filter(t => t.status === 'active').map(t => t.id);
+        setValue('selectedTasks', activeTaskIds);
+    }, [availableTasks, setValue]);
+
+
+    const tasksToDisplay = useMemo(() => {
+        return availableTasks.map(task => {
+            const isSelected = selectedTaskIds.includes(task.id);
+            if (task.status === 'active') {
+                return { type: task.type, display: isSelected ? 'normal' : 'strike' };
+            }
+            if (task.status === 'optional' && isSelected) {
+                return { type: task.type, display: 'normal' };
+            }
+            return null;
+        }).filter(Boolean);
+    }, [availableTasks, selectedTaskIds]);
 
   return (
     <Form {...form}>
       <form action={formAction} className="space-y-6">
         <input type="hidden" {...form.register('userId')} />
+        {selectedTaskIds.map(id => <input key={id} type="hidden" name="selectedTasks" value={id} />)}
         
         <Card>
           <CardHeader>
@@ -98,13 +219,17 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
           <CardContent className="grid gap-6">
             <div className="grid md:grid-cols-3 gap-6">
                 <FormField
-                control={form.control}
+                control={control}
                 name="project"
                 render={({ field }) => (
                     <FormItem className='md:col-span-2'>
                     <FormLabel>{t.projectLabel}</FormLabel>
                     <Select
-                        onValueChange={field.onChange}
+                        onValueChange={(value) => {
+                            field.onChange(value);
+                            // Reset tasks when project changes
+                             setValue('selectedTasks', []);
+                        }}
                         defaultValue={field.value}
                         name={field.name}
                     >
@@ -126,7 +251,7 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
                 )}
                 />
                  <FormField
-                    control={form.control}
+                    control={control}
                     name="number"
                     render={({ field }) => (
                     <FormItem>
@@ -146,7 +271,7 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
                 />
             </div>
              <FormField
-                control={form.control}
+                control={control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
@@ -159,8 +284,39 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
                 )}
               />
 
+            <div className='grid md:grid-cols-3 gap-6'>
+                <FormField
+                    control={control}
+                    name="selectedTasks"
+                    render={({ field }) => (
+                        <FormItem className="md:col-span-1">
+                            <FormLabel>{t.tasksLabel}</FormLabel>
+                            <TasksMultiSelect 
+                                availableTasks={availableTasks}
+                                selectedTaskIds={field.value || []}
+                                onSelectionChange={field.onChange}
+                                lang={settings.language as 'en' | 'es'}
+                            />
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <div className='md:col-span-2 flex items-end'>
+                    <div className='flex flex-wrap gap-2 p-2 border rounded-md w-full min-h-[40px]'>
+                         {tasksToDisplay.map((task, index) => (
+                            task && (
+                                <Badge key={index} variant="secondary" className={cn(task.display === 'strike' && 'line-through')}>
+                                    {task.type}
+                                </Badge>
+                            )
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+
             <FormField
-              control={form.control}
+              control={control}
               name="description"
               render={({ field }) => (
                 <FormItem>
