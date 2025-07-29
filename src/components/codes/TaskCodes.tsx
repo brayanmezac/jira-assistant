@@ -303,7 +303,7 @@ function ProjectsMultiSelect({
     userProjects,
     selectedProjectIds,
     onSelectionChange,
-    lang
+    lang = 'en'
 }: {
     userProjects: ProjectCode[];
     selectedProjectIds: string[];
@@ -632,7 +632,7 @@ export function TaskCodes({ initialTasks, userProjects }: { initialTasks: TaskCo
                             userProjects={userProjects}
                             selectedProjectIds={editingProjectIds}
                             onSelectionChange={setEditingProjectIds}
-                            lang={settings.language as 'en' | 'es'}
+                            lang={(settings.language as 'en' | 'es') || 'en'}
                         />
                     </div>
                   <DialogFooter>
@@ -742,7 +742,7 @@ export function TaskCodes({ initialTasks, userProjects }: { initialTasks: TaskCo
                                         userProjects={userProjects}
                                         selectedProjectIds={editingProjectIds}
                                         onSelectionChange={setEditingProjectIds}
-                                        lang={settings.language as 'en' | 'es'}
+                                        lang={(settings.language as 'en' | 'es') || 'en'}
                                     />
                                 </div>
                               <DialogFooter>
