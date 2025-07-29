@@ -103,6 +103,7 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
     <Form {...form}>
       <form action={formAction}>
         <input type="hidden" {...form.register('userId')} />
+        <input type="hidden" {...form.register('model')} />
         <Card>
           <CardHeader>
             <CardTitle>{t.cardTitle}</CardTitle>
@@ -187,36 +188,6 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
                   </FormControl>
                   <FormDescription>
                     {t.aiContextDescription}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="model"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t.modelLabel}</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={t.modelPlaceholder} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="googleai/gemini-1.5-flash-latest">
-                        <div className='flex items-center gap-2'>
-                            <Bot />
-                            <span>Gemini 1.5 Flash</span>
-                        </div>
-                      </SelectItem>
-                      {/* Add other models here when available */}
-                    </SelectContent>
-                  </Select>
-                   <FormDescription>
-                    {t.modelDescription}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
