@@ -27,7 +27,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription }
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { SubmitButton } from '../SubmitButton';
-import { Bot, PencilLine } from 'lucide-react';
+import { PencilLine } from 'lucide-react';
 import { useSettings } from '@/hooks/use-settings';
 import { useAuth } from '../auth/AuthProvider';
 
@@ -74,6 +74,12 @@ const translations = {
     }
 }
 
+const availableModels = [
+    { value: 'googleai/gemini-1.5-flash-latest', label: 'Gemini 1.5 Flash' },
+    { value: 'googleai/gemini-1.5-pro-latest', label: 'Gemini 1.5 Pro' },
+    { value: 'googleai/gemini-1.0-pro', label: 'Gemini 1.0 Pro' },
+]
+
 
 export function GeneratorForm({ formAction }: GeneratorFormProps) {
     const [projects, setProjects] = useState<ProjectCode[]>([]);
@@ -92,18 +98,11 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
         fetchProjects();
     }, [user]);
 
-  // Sync userId to form if it changes
-  useEffect(() => {
-    if (user) {
-        form.setValue('userId', user.uid);
-    }
-  }, [user, form]);
-
   return (
     <Form {...form}>
-      <form action={formAction}>
+      <form action={formAction} className="space-y-6">
         <input type="hidden" {...form.register('userId')} />
-        <input type="hidden" {...form.register('model')} />
+        
         <Card>
           <CardHeader>
             <CardTitle>{t.cardTitle}</CardTitle>
@@ -193,6 +192,31 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
                 </FormItem>
               )}
             />
+             <FormField
+                control={form.control}
+                name="model"
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>{t.modelLabel}</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder={t.modelPlaceholder} />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {availableModels.map(model => (
+                                    <SelectItem key={model.value} value={model.value}>
+                                        {model.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <FormDescription>{t.modelDescription}</FormDescription>
+                        <FormMessage />
+                    </FormItem>
+                )}
+                />
           </CardContent>
           <CardFooter>
             <SubmitButton loadingText={t.submittingButton}>

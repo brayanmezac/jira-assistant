@@ -40,12 +40,11 @@ export function JiraGenerator() {
   });
   
   // Watch for form values to pass to GeneratedContent
-  const watchedDescription = form.watch('description');
-  const watchedModel = form.watch('model');
+  const watchedValues = form.watch();
 
   // Sync userId to form if it changes (e.g., after initial load)
   useEffect(() => {
-    if (user) {
+    if (user && form.getValues('userId') !== user.uid) {
       form.setValue('userId', user.uid);
     }
   }, [user, form]);
@@ -53,7 +52,7 @@ export function JiraGenerator() {
   useEffect(() => {
     if (state && !state.success && state.message) {
       // Don't show toast if form is dirty, as RHF will show field errors
-      if (form.formState.isDirty) return;
+      if (form.formState.isDirty || form.formState.isSubmitted) return;
       
       toast({
         variant: 'destructive',
@@ -74,10 +73,10 @@ export function JiraGenerator() {
           projectKey={state.data.projectKey}
           storyNumber={state.data.storyNumber}
           tasks={state.data.tasks}
-          aiContext={watchedDescription}
-          model={watchedModel}
+          aiContext={watchedValues.description}
+          model={watchedValues.model}
         />
-      ) : !state.success && state.message && !form.formState.isDirty ? (
+      ) : !state.success && state.message && !form.formState.isDirty && !form.formState.isSubmitted ? (
         <Alert variant="destructive" className="mt-8">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Preparation Failed</AlertTitle>
