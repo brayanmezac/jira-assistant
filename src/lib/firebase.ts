@@ -1,6 +1,6 @@
 
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore, collection, getDocs, doc, addDoc, updateDoc, deleteDoc, type DocumentData, type WithFieldValue, setDoc, getDoc, query, where } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, doc, addDoc, updateDoc, deleteDoc, type DocumentData, type WithFieldValue, setDoc, getDoc, query, where, orderBy, writeBatch } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import type { ProjectCode, TaskCode, JiraSettings } from './types';
 
@@ -57,7 +57,7 @@ export async function getProjectCode(id: string): Promise<ProjectCode | null> {
 }
 
 
-export async function addProjectCode(projectData: WithFieldValue<Omit<ProjectCode, 'id'>>): Promise<ProjectCode> {
+export async function addProjectCode(projectData: WithFieldValue<Omit<ProjectCode, 'id'>>) {
     const docRef = await addDoc(collection(db, 'projectCodes'), projectData);
     const docSnap = await getDoc(docRef);
     return docToTyped<ProjectCode>(docSnap);
@@ -75,7 +75,7 @@ export async function deleteProjectCode(id: string) {
 
 // Task Codes - User-specific
 export async function getTaskCodes(userId: string): Promise<TaskCode[]> {
-    const q = query(collection(db, 'taskCodes'), where('userId', '==', userId));
+    const q = query(collection(db, 'taskCodes'), where('userId', '==', userId), orderBy('order'));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => docToTyped<TaskCode>(doc));
 }
@@ -90,7 +90,14 @@ export async function getTaskCode(id: string): Promise<TaskCode | null> {
 }
 
 export async function addTaskCode(taskData: WithFieldValue<Omit<TaskCode, 'id'>>): Promise<TaskCode> {
-    const docRef = await addDoc(collection(db, 'taskCodes'), taskData);
+    const collectionRef = collection(db, 'taskCodes');
+    const q = query(collectionRef, where('userId', '==', taskData.userId), orderBy('order', 'desc'), where('order', '!=', null));
+    const snapshot = await getDocs(q);
+    const lastOrder = snapshot.docs.length > 0 ? (snapshot.docs[0].data().order as number) : -1;
+    
+    const dataWithOrder = { ...taskData, order: lastOrder + 1 };
+    
+    const docRef = await addDoc(collectionRef, dataWithOrder);
     const docSnap = await getDoc(docRef);
     return docToTyped<TaskCode>(docSnap);
 }
@@ -99,6 +106,16 @@ export async function updateTaskCode(id: string, taskData: Partial<Omit<TaskCode
     const docRef = doc(db, 'taskCodes', id);
     await updateDoc(docRef, taskData);
 }
+
+export async function batchUpdateTaskOrder(tasks: { id: string; order: number }[]) {
+    const batch = writeBatch(db);
+    tasks.forEach(task => {
+        const docRef = doc(db, 'taskCodes', task.id);
+        batch.update(docRef, { order: task.order });
+    });
+    await batch.commit();
+}
+
 
 export async function deleteTaskCode(id: string) {
     const docRef = doc(db, 'taskCodes', id);

@@ -39,6 +39,7 @@ export const taskCodeSchema = z.object({
   status: z.enum(['active', 'inactive', 'optional']).default('active'),
   projectIds: z.array(z.string()).optional().default([]), // Empty array means "General"
   template: z.string().optional(), // Added template field
+  order: z.number().default(0),
 });
 export type TaskCode = z.infer<typeof taskCodeSchema> & { id: string };
 

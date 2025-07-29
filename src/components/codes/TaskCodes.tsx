@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useRef, useState, useMemo, useEffect } from 'react';
+import { useRef, useState, useMemo, useEffect, DragEvent } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Pencil, Trash2, Download, Upload, MoreVertical, Power, PowerOff, Check, ChevronsUpDown, Search, FileText, HelpCircle } from 'lucide-react';
+import { Loader2, Pencil, Trash2, Download, Upload, MoreVertical, Power, PowerOff, Check, ChevronsUpDown, Search, FileText, HelpCircle, GripVertical } from 'lucide-react';
 import type { TaskCode, ProjectCode } from '@/lib/types';
 import {
   Table,
@@ -26,7 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { addTaskCode, deleteTaskCode, updateTaskCode } from '@/lib/firebase';
+import { addTaskCode, deleteTaskCode, updateTaskCode, batchUpdateTaskOrder } from '@/lib/firebase';
 import { taskCodeSchema } from '@/lib/types';
 import {
   AlertDialog,
@@ -128,6 +128,8 @@ const translations = {
         importCompleteDesc: '{count} new task(s) imported successfully.',
         importFailed: 'Import Failed',
         importFailedDesc: 'Invalid JSON format or file content.',
+        orderUpdateSuccess: 'Task order updated successfully.',
+        orderUpdateError: 'Failed to update task order.',
     },
     es: {
         allProjects: 'Todos los Proyectos',
@@ -189,6 +191,8 @@ const translations = {
         importCompleteDesc: '{count} nueva(s) tarea(s) importada(s) con éxito.',
         importFailed: 'Importación Fallida',
         importFailedDesc: 'Formato JSON o contenido de archivo no válido.',
+        orderUpdateSuccess: 'Orden de tareas actualizado con éxito.',
+        orderUpdateError: 'Error al actualizar el orden de las tareas.',
     }
 }
 
@@ -314,7 +318,7 @@ function ProjectsMultiSelect({
     onSelectionChange: (ids: string[]) => void;
     lang: 'en' | 'es';
 }) {
-    const t = translations[lang];
+    const t = translations[lang] || translations.en;
     const [isOpen, setIsOpen] = useState(false);
 
     const handleSelect = (projectId: string) => {
@@ -428,11 +432,13 @@ export function TaskCodes({ initialTasks, userProjects }: { initialTasks: TaskCo
   const formRef = useRef<HTMLFormElement>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
-
+  
   const [tasks, setTasks] = useState(initialTasks);
   const [loading, setLoading] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskCode | null>(null);
   const [editingProjectIds, setEditingProjectIds] = useState<string[]>([]);
+  const draggedItem = useRef<TaskCode | null>(null);
+  const dropTargetItem = useRef<TaskCode | null>(null);
 
   // Filters state
   const [searchTerm, setSearchTerm] = useState('');
@@ -441,6 +447,10 @@ export function TaskCodes({ initialTasks, userProjects }: { initialTasks: TaskCo
   
   const { settings } = useSettings();
   const t = translations[settings.language as keyof typeof translations] || translations.en;
+
+  useEffect(() => {
+    setTasks(initialTasks);
+  }, [initialTasks]);
 
   const filteredTasks = useMemo(() => {
     return tasks.filter(task => {
@@ -462,7 +472,7 @@ export function TaskCodes({ initialTasks, userProjects }: { initialTasks: TaskCo
 
   const handleTaskAddedFromImport = (newTask: TaskCode) => {
     if (!tasks.some(p => p.id === newTask.id)) {
-        setTasks(prev => [...prev, newTask].sort((a,b) => a.name.localeCompare(b.name)));
+        setTasks(prev => [...prev, newTask]);
     }
   }
 
@@ -497,6 +507,7 @@ export function TaskCodes({ initialTasks, userProjects }: { initialTasks: TaskCo
       projectIds: editingProjectIds,
       status: 'active' as 'active' | 'inactive',
       template: '', // Add template field
+      order: tasks.length,
     };
 
     const validatedFields = taskCodeSchema.omit({iconUrl: true}).safeParse(newTaskData);
@@ -511,7 +522,7 @@ export function TaskCodes({ initialTasks, userProjects }: { initialTasks: TaskCo
       const dataToSave = { ...validatedFields.data, iconUrl: iconUrl || '' };
       const newTask = await addTaskCode(dataToSave);
       toast({ title: '✅ Success!', description: t.addSuccess });
-      setTasks(p => [newTask, ...p].sort((a, b) => a.name.localeCompare(b.name)));
+      setTasks(p => [...p, newTask]);
       formRef.current?.reset();
       setEditingProjectIds([]);
     } catch (error) {
@@ -536,7 +547,7 @@ export function TaskCodes({ initialTasks, userProjects }: { initialTasks: TaskCo
       userId: user.uid
     };
     
-    const validatedFields = taskCodeSchema.omit({ iconUrl: true, status: true, template: true }).safeParse(updatedData);
+    const validatedFields = taskCodeSchema.omit({ iconUrl: true, status: true, template: true, order: true }).safeParse(updatedData);
     if (!validatedFields.success) {
         toast({ variant: 'destructive', title: '❌ Error', description: validatedFields.error.errors.map(e => e.message).join(', ') });
         setLoading(false);
@@ -548,7 +559,7 @@ export function TaskCodes({ initialTasks, userProjects }: { initialTasks: TaskCo
       const dataToUpdate = { ...validatedFields.data, iconUrl: iconUrl || '' };
       await updateTaskCode(editingTask.id, dataToUpdate);
       toast({ title: '✅ Success!', description: t.updateSuccess, });
-      setTasks(p => p.map((task) => task.id === editingTask.id ? { ...task, ...dataToUpdate } : task).sort((a, b) => a.name.localeCompare(b.name)));
+      setTasks(p => p.map((task) => task.id === editingTask.id ? { ...task, ...dataToUpdate } : task));
       setEditingTask(null);
     } catch (error) {
       console.error(error);
@@ -605,9 +616,12 @@ export function TaskCodes({ initialTasks, userProjects }: { initialTasks: TaskCo
         const tasksToImport = z.array(taskCodeSchema.omit({ userId: true, id: true })).parse(json);
         
         let importedCount = 0;
+        let currentMaxOrder = tasks.length > 0 ? Math.max(...tasks.map(t => t.order || 0)) : -1;
+
         for (const task of tasksToImport) {
           if (!tasks.some(t => t.name === task.name)) {
-            const newTaskData = { ...task, userId: user.uid };
+            currentMaxOrder++;
+            const newTaskData = { ...task, order: currentMaxOrder, userId: user.uid };
             const newTask = await addTaskCode(newTaskData);
             handleTaskAddedFromImport(newTask);
             importedCount++;
@@ -626,6 +640,51 @@ export function TaskCodes({ initialTasks, userProjects }: { initialTasks: TaskCo
     setEditingTask(task);
     setEditingProjectIds(task.projectIds || []);
   };
+  
+  const handleDragStart = (e: DragEvent<HTMLTableRowElement>, task: TaskCode) => {
+      draggedItem.current = task;
+      e.dataTransfer.effectAllowed = 'move';
+  }
+  
+  const handleDragOver = (e: DragEvent<HTMLTableRowElement>, task: TaskCode) => {
+      e.preventDefault();
+      dropTargetItem.current = task;
+  }
+  
+  const handleDrop = async () => {
+      if (!draggedItem.current || !dropTargetItem.current || draggedItem.current.id === dropTargetItem.current.id) {
+          return;
+      }
+
+      const currentIndex = tasks.findIndex(t => t.id === draggedItem.current!.id);
+      const targetIndex = tasks.findIndex(t => t.id === dropTargetItem.current!.id);
+
+      const newTasks = [...tasks];
+      const [movedItem] = newTasks.splice(currentIndex, 1);
+      newTasks.splice(targetIndex, 0, movedItem);
+
+      const updatedTasksWithOrder = newTasks.map((task, index) => ({
+          ...task,
+          order: index
+      }));
+      
+      setTasks(updatedTasksWithOrder);
+      
+      const orderUpdatePayload = updatedTasksWithOrder.map(t => ({ id: t.id, order: t.order }));
+      
+      try {
+          await batchUpdateTaskOrder(orderUpdatePayload);
+          toast({ title: '✅ Success!', description: t.orderUpdateSuccess });
+      } catch (error) {
+          console.error(error);
+          setTasks(tasks); // Revert on error
+          toast({ variant: 'destructive', title: `❌ ${t.orderUpdateError}`, description: 'An error occurred.' });
+      }
+
+      draggedItem.current = null;
+      dropTargetItem.current = null;
+  }
+
 
   return (
     <Card>
@@ -731,6 +790,7 @@ export function TaskCodes({ initialTasks, userProjects }: { initialTasks: TaskCo
               <Table>
                 <TableHeader className="sticky top-0 bg-card">
                   <TableRow>
+                    <TableHead className='w-12'></TableHead>
                     <TableHead>{t.tableName}</TableHead>
                     <TableHead>{t.tableType}</TableHead>
                     <TableHead>{t.tableCode}</TableHead>
@@ -740,7 +800,17 @@ export function TaskCodes({ initialTasks, userProjects }: { initialTasks: TaskCo
                 </TableHeader>
                 <TableBody>
                   {filteredTasks.map((task) => (
-                    <TableRow key={task.id}>
+                    <TableRow 
+                        key={task.id}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, task)}
+                        onDragOver={(e) => handleDragOver(e, task)}
+                        onDrop={handleDrop}
+                        className='cursor-grab active:cursor-grabbing'
+                    >
+                      <TableCell>
+                          <GripVertical className='text-muted-foreground' />
+                      </TableCell>
                       <TableCell className="font-medium flex items-center gap-2">
                         {task.iconUrl && <Image src={task.iconUrl} alt={task.name} width={16} height={16} unoptimized />}
                         {task.name}
