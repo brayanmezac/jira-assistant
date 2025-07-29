@@ -93,7 +93,7 @@ function TasksMultiSelect({
     onSelectionChange: (ids: string[]) => void;
     lang: 'en' | 'es';
 }) {
-    const t = translations[lang];
+    const t = translations[lang] || translations.en;
     const [isOpen, setIsOpen] = useState(false);
 
     const handleSelect = (taskId: string) => {
