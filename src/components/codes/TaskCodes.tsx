@@ -311,14 +311,14 @@ function ProjectsMultiSelect({
     userProjects,
     selectedProjectIds,
     onSelectionChange,
-    lang = 'en'
+    lang,
 }: {
     userProjects: ProjectCode[];
     selectedProjectIds: string[];
     onSelectionChange: (ids: string[]) => void;
     lang: 'en' | 'es';
 }) {
-    const t = translations[lang] || translations.en;
+    const t = translations[lang || 'en'];
     const [isOpen, setIsOpen] = useState(false);
 
     const handleSelect = (projectId: string) => {
@@ -403,9 +403,9 @@ function StatusButton({ task, onStatusChange }: { task: TaskCode, onStatusChange
     };
 
     const statusMap = {
-        active: { icon: Power, color: 'text-green-500', label: t.active },
-        inactive: { icon: PowerOff, color: 'text-red-500', label: t.inactive },
-        optional: { icon: HelpCircle, color: 'text-amber-500', label: t.optional },
+        active: { icon: Power, color: 'text-green-500 hover:text-green-500 hover:bg-green-500/10', label: t.active },
+        inactive: { icon: PowerOff, color: 'text-red-500 hover:text-red-500 hover:bg-red-500/10', label: t.inactive },
+        optional: { icon: HelpCircle, color: 'text-amber-500 hover:text-amber-500 hover:bg-amber-500/10', label: t.optional },
     };
 
     const { icon: Icon, color, label } = statusMap[task.status] || statusMap.inactive;
@@ -829,7 +829,7 @@ export function TaskCodes({ initialTasks, userProjects }: { initialTasks: TaskCo
                       </TableCell>
                       <TableCell className="text-right space-x-1">
                         <StatusButton task={task} onStatusChange={handleStatusChange} />
-                        <Button variant="ghost" size="icon" className="h-8 w-8" asChild title={t.editTemplate}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-500 hover:text-blue-500 hover:bg-blue-500/10" asChild title={t.editTemplate}>
                             <Link href={`/codes/tasks/${task.id}/template`}>
                                 <FileText className="h-4 w-4" />
                             </Link>
@@ -839,7 +839,7 @@ export function TaskCodes({ initialTasks, userProjects }: { initialTasks: TaskCo
                           onOpenChange={(isOpen) => { if (!isOpen) setEditingTask(null); }}
                         >
                           <DialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(task)} title={t.editTask}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-amber-500 hover:text-amber-500 hover:bg-amber-500/10" onClick={() => openEditDialog(task)} title={t.editTask}>
                               <Pencil className="h-4 w-4" />
                             </Button>
                           </DialogTrigger>

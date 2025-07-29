@@ -441,7 +441,7 @@ export function ProjectCodes({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8"
+                      className="h-8 w-8 text-blue-500 hover:text-blue-500 hover:bg-blue-500/10"
                       asChild
                       title={t.editTemplate}
                     >
@@ -460,7 +460,7 @@ export function ProjectCodes({
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8"
+                          className="h-8 w-8 text-amber-500 hover:text-amber-500 hover:bg-amber-500/10"
                           onClick={() => setEditingProject(project)}
                           title={t.editProject}
                         >
