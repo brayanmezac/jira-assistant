@@ -37,13 +37,13 @@ export function JiraGenerator() {
       userId: user?.uid || '',
       model: 'googleai/gemini-1.5-flash-latest',
     },
-    context: state,
   });
   
-  // Watch for form values
+  // Watch for form values to pass to GeneratedContent
   const watchedDescription = form.watch('description');
   const watchedModel = form.watch('model');
 
+  // Sync userId to form if it changes (e.g., after initial load)
   useEffect(() => {
     if (user) {
       form.setValue('userId', user.uid);
@@ -52,6 +52,9 @@ export function JiraGenerator() {
   
   useEffect(() => {
     if (state && !state.success && state.message) {
+      // Don't show toast if form is dirty, as RHF will show field errors
+      if (form.formState.isDirty) return;
+      
       toast({
         variant: 'destructive',
         title: 'An error occurred',
