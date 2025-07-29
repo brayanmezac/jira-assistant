@@ -183,13 +183,13 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
       fetchProjectsAndTasks();
   }, [user]);
 
-    useEffect(() => {
-      // When available tasks change (e.g., after selecting a project),
-      // initialize the selected tasks to all active ones.
-      if (availableTasks.length > 0) {
-        const activeTaskIds = availableTasks.filter(t => t.status === 'active').map(t => t.id);
-        setValue('selectedTasks', activeTaskIds);
-      }
+  useEffect(() => {
+    // When available tasks change (e.g., after selecting a project),
+    // initialize the selected tasks to all active ones.
+    const activeTaskIds = availableTasks
+        .filter(t => t.status === 'active')
+        .map(t => t.id);
+    setValue('selectedTasks', activeTaskIds);
   }, [availableTasks, setValue]);
 
 
@@ -198,11 +198,9 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
         .map(task => {
             const isSelected = selectedTaskIds.includes(task.id);
             if (task.status === 'active') {
-                // Show active tasks: normal if selected, strikethrough if deselected
                 return { id: task.id, type: task.type, display: isSelected ? 'normal' : 'strike' };
             }
             if (task.status === 'optional' && isSelected) {
-                // Show optional tasks only if they are selected
                 return { id: task.id, type: task.type, display: 'normal' };
             }
             return null;
@@ -232,7 +230,6 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
                     <Select
                         onValueChange={(value) => {
                             field.onChange(value);
-                            // Reset tasks when project changes
                             setValue('selectedTasks', []);
                         }}
                         defaultValue={field.value}
@@ -327,7 +324,7 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
                   <FormControl>
                     <Textarea
                       placeholder={t.aiContextPlaceholder}
-                      className="min-h-40"
+                      className="min-h-40 transition-all duration-300 focus-visible:shadow-[0_0_15px_hsl(var(--primary)/0.5)]"
                       {...field}
                     />
                   </FormControl>
