@@ -78,8 +78,6 @@ const availableModels = [
     { value: 'googleai/gemini-1.5-flash-latest', label: 'Gemini 1.5 Flash' },
     { value: 'googleai/gemini-1.5-pro-latest', label: 'Gemini 1.5 Pro' },
     { value: 'googleai/gemini-1.0-pro', label: 'Gemini 1.0 Pro' },
-    { value: 'openai/gpt-4o', label: 'OpenAI GPT-4o' },
-    { value: 'openai/gpt-4-turbo', label: 'OpenAI GPT-4 Turbo' },
 ]
 
 

@@ -1,6 +1,5 @@
 import {genkit} from 'genkit';
 import {googleAI} from '@genkit-ai/googleai';
-import {openAI} from '@genkit-ai/compat-oai';
 import {config} from 'dotenv';
 
 config();
@@ -13,15 +12,6 @@ const plugins = [];
 if (process.env.GEMINI_API_KEY) {
     plugins.push(googleAI());
 }
-
-
-if (process.env.OPENAI_API_KEY) {
-    plugins.push(openAI({
-        apiKey: process.env.OPENAI_API_KEY,
-    }));
-}
-
-
 
 export const ai = genkit({
   plugins,
