@@ -35,7 +35,7 @@ export function JiraGenerator() {
     defaultValues: {
       name: '',
       description: '',
-      number: '' as any,
+      number: undefined,
       project: '',
       userId: user?.uid || '',
       model: 'googleai/gemini-1.5-flash-latest',

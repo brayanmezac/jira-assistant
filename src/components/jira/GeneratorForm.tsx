@@ -97,7 +97,7 @@ export function GeneratorForm({ formAction, initialState }: GeneratorFormProps) 
     defaultValues: {
       name: '',
       description: '',
-      number: '' as any, // Changed from undefined to empty string
+      number: undefined,
       project: '',
       userId: user?.uid || '',
       model: 'googleai/gemini-1.5-flash-latest',
@@ -171,7 +171,13 @@ export function GeneratorForm({ formAction, initialState }: GeneratorFormProps) 
                   <FormItem>
                     <FormLabel>{t.storyNumberLabel}</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder={t.storyNumberPlaceholder} {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)}/>
+                      <Input 
+                        type="number" 
+                        placeholder={t.storyNumberPlaceholder} 
+                        {...field} 
+                        onChange={e => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))}
+                        value={field.value ?? ''}
+                        />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
