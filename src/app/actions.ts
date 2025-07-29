@@ -27,11 +27,10 @@ const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
 });
 
-async function generateWithOpenAI(model: string, system: string, prompt: string): Promise<string> {
+async function generateWithOpenAI(prompt: string): Promise<string> {
     const response = await openai.chat.completions.create({
-        model: model,
+        model: "gpt-4o",
         messages: [
-            { role: 'system', content: system },
             { role: 'user', content: prompt }
         ],
         temperature: 0.7,
@@ -101,7 +100,7 @@ async function processTemplateWithAI(template: string, context: string): Promise
     `;
     
     try {
-        const aiResultText = await generateWithOpenAI("gpt-4o", "You are a JSON generation service. Respond only with valid JSON.", batchPrompt);
+        const aiResultText = await generateWithOpenAI(batchPrompt);
 
         // Clean the AI response by removing markdown code fences before parsing
         const cleanedJson = aiResultText.replace(/^```json\n|```$/g, '');
@@ -147,6 +146,7 @@ export async function generateJiraTicketsAction(
   }
   
   const { name, description, project, number, userId } = validatedFields.data;
+  const aiContext = description || '';
 
   if (!userId) {
     return {
@@ -167,9 +167,9 @@ export async function generateJiraTicketsAction(
     }
     
     const fullProject = await getProjectCode(projectInfo.id);
-    const template = fullProject?.template || description; 
+    const template = fullProject?.template || aiContext; 
     
-    const finalDescription = await processTemplateWithAI(template, description || '');
+    const finalDescription = await processTemplateWithAI(template, aiContext);
 
     const projectKey = projectInfo.code;
     
@@ -180,18 +180,27 @@ export async function generateJiraTicketsAction(
       (!task.projectIds || task.projectIds.length === 0 || task.projectIds.includes(projectInfo.id))
     );
 
-    // Sanitize tasks for serialization before sending to the client
-    const sanitizedTasks: TaskCode[] = relevantTasks.map(task => ({
-        id: task.id,
-        userId: task.userId,
-        code: task.code,
-        name: task.name,
-        type: task.type,
-        iconUrl: task.iconUrl || '',
-        status: task.status,
-        projectIds: task.projectIds || [],
-        template: task.template || '',
-    }));
+    // Sanitize tasks for serialization before sending to the client,
+    // and pre-process their templates.
+    const sanitizedTasks: TaskCode[] = await Promise.all(
+        relevantTasks.map(async (task) => {
+            const processedTemplate = task.template 
+                ? await processTemplateWithAI(task.template, aiContext) 
+                : '';
+            
+            return {
+                id: task.id,
+                userId: task.userId,
+                code: task.code,
+                name: task.name,
+                type: task.type,
+                iconUrl: task.iconUrl || '',
+                status: task.status,
+                projectIds: task.projectIds || [],
+                template: processedTemplate, // Use the processed template content
+            };
+        })
+    );
 
 
     return {
@@ -309,17 +318,12 @@ export async function createJiraTickets(
     
     for (const subtask of tasks) {
       const subtaskSummary = `${projectKey}_${storyNumber}_${subtask.type} ${subtask.name}`;
-      let subtaskDescription = '';
-
-      if (subtask.template) {
-        subtaskDescription = await processTemplateWithAI(subtask.template, aiContext);
-      } 
       
       const subtaskPayload = {
         fields: {
           project: { key: projectKey },
           summary: subtaskSummary,
-          description: subtaskDescription,
+          description: subtask.template, // The template is already processed
           issuetype: { id: subtask.code },
           parent: { key: storyKey },
         },
@@ -559,5 +563,3 @@ export async function getJiraIssueTypes(
     };
   }
 }
-
-    

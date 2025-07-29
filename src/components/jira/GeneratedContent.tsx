@@ -11,6 +11,7 @@ import { useSettings } from '@/hooks/use-settings';
 import { createJiraTickets } from '@/app/actions';
 import type { TaskCode } from '@/lib/types';
 import { useFormContext } from 'react-hook-form';
+import { renderJiraMarkup } from '@/lib/jira-markup-renderer';
 
 type GeneratedContentProps = {
   storyDescription: string;
@@ -80,9 +81,10 @@ function ContentDisplay({ content }: { content: string }) {
         {copied ? <CheckCircle className="text-green-500" /> : <Clipboard />}
         <span className="sr-only">{t.copy}</span>
       </Button>
-      <div className="prose prose-sm dark:prose-invert max-w-none rounded-md border bg-muted/50 p-4 h-96 overflow-auto whitespace-pre-wrap">
-        {content}
-      </div>
+      <div 
+        className="prose prose-sm dark:prose-invert max-w-none rounded-md border bg-muted/50 p-4 h-96 overflow-auto"
+        dangerouslySetInnerHTML={{ __html: renderJiraMarkup(content) }}
+      />
     </div>
   );
 }
@@ -198,5 +200,3 @@ export function GeneratedContent({ storyDescription, storyName, projectKey, stor
     </div>
   );
 }
-
-    

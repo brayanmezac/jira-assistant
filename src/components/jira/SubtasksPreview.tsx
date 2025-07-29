@@ -1,23 +1,29 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckSquare, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import type { TaskCode } from '@/lib/types';
 import { useSettings } from '@/hooks/use-settings';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
+import { renderJiraMarkup } from '@/lib/jira-markup-renderer';
 
 const translations = {
     en: {
         title: 'Subtasks to be Created',
-        description: 'The following subtasks will be automatically created under the new story, based on your configuration.',
+        description: 'The following subtasks will be automatically created. Expand to preview template content.',
     },
     es: {
         title: 'Subtareas a Crear',
-        description: 'Las siguientes subtareas se crearán automáticamente bajo la nueva historia, según tu configuración.',
+        description: 'Las siguientes subtareas se crearán automáticamente. Expande para previsualizar el contenido de la plantilla.',
     }
 }
-
 
 export function SubtasksPreview({ tasks = [] }: { tasks: TaskCode[] }) {
   const [loading, setLoading] = useState(false);
@@ -38,17 +44,33 @@ export function SubtasksPreview({ tasks = [] }: { tasks: TaskCode[] }) {
                 <Loader2 className="animate-spin text-muted-foreground" />
             </div>
         ) : (
-        <ul className="space-y-3">
-          {tasks.map((task) => (
-            <li key={task.id} className="flex items-center gap-3 text-sm">
-              <CheckSquare className="h-5 w-5 text-primary/80 shrink-0" />
-              <div className="flex flex-col">
-                <span className="font-medium text-foreground">{task.name}</span>
-                <span className="text-muted-foreground text-xs">{task.type}</span>
-              </div>
-            </li>
-          ))}
-        </ul>
+          <Accordion type="multiple" className="w-full">
+            {tasks.map((task) => (
+              task.template ? (
+                <AccordionItem value={task.id} key={task.id}>
+                  <AccordionTrigger className='text-sm font-medium'>
+                    <div className='flex flex-col text-left'>
+                      <span>{task.name}</span>
+                       <span className="text-muted-foreground text-xs font-normal">{task.type}</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div 
+                        className="prose prose-sm dark:prose-invert max-w-none rounded-md border bg-muted/50 p-3"
+                        dangerouslySetInnerHTML={{ __html: renderJiraMarkup(task.template) }}
+                    />
+                  </AccordionContent>
+                </AccordionItem>
+              ) : (
+                 <div key={task.id} className="flex items-center border-b py-4 text-sm font-medium">
+                    <div className='flex flex-col text-left'>
+                        <span>{task.name}</span>
+                        <span className="text-muted-foreground text-xs font-normal">{task.type}</span>
+                    </div>
+                 </div>
+              )
+            ))}
+          </Accordion>
         )}
       </CardContent>
     </Card>
