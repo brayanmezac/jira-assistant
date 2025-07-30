@@ -333,13 +333,11 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
                 <FormItem>
                   <FormLabel>{t.aiContextLabel}</FormLabel>
                   <FormControl>
-                    <div className="radial-border-wrapper">
-                      <Textarea
-                        placeholder={t.aiContextPlaceholder}
-                        className="min-h-40"
-                        {...field}
-                      />
-                    </div>
+                    <Textarea
+                      placeholder={t.aiContextPlaceholder}
+                      className="min-h-40 focus:border-primary focus:ring-2 focus:ring-primary/50"
+                      {...field}
+                    />
                   </FormControl>
                   <FormDescription>
                     {t.aiContextDescription}
