@@ -93,7 +93,7 @@ function TasksMultiSelect({
     onSelectionChange: (ids: string[]) => void;
     lang?: 'en' | 'es';
 }) {
-    const t = translations[lang];
+    const t = translations[lang] || translations.en;
     const [isOpen, setIsOpen] = useState(false);
 
     const handleSelect = (taskId: string) => {
@@ -175,14 +175,14 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
         const activeTaskIds = availableTasks
           .filter(t => t.status === 'active')
           .map(t => t.id);
-        setValue('selectedTasks', activeTaskIds);
+        setValue('selectedTasks', activeTaskIds, { shouldValidate: true, shouldDirty: true });
     }
   }, [availableTasks, selectedProject, setValue]);
 
   const tasksToDisplay = useMemo(() => {
+    if (!selectedProject) return [];
       return allTasks
         .filter(task => {
-            if (!selectedProject) return false;
             const projectInfo = projects.find(p => p.name === selectedProject);
             if (!projectInfo) return false;
             
@@ -192,10 +192,10 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
             const isSelected = selectedTaskIds.includes(task.id);
 
             if (task.status === 'active') {
-                return true; // Always show active tasks to be able to strike them through
+                return true; 
             }
             if (task.status === 'optional' && isSelected) {
-                return true; // Show optional tasks only if selected
+                return true;
             }
             return false;
         })
@@ -213,6 +213,8 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
               getProjectCodes(user.uid),
               getTaskCodes(user.uid)
           ]);
+          projectList.sort((a,b) => a.name.localeCompare(b.name));
+          // tasks are already sorted by order from firebase
           setProjects(projectList);
           setAllTasks(taskList);
       };
@@ -241,7 +243,6 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
                     <Select
                         onValueChange={(value) => {
                             field.onChange(value);
-                            setValue('selectedTasks', []);
                         }}
                         defaultValue={field.value}
                         name={field.name}
@@ -307,7 +308,7 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
                             <TasksMultiSelect 
                                 availableTasks={availableTasks}
                                 selectedTaskIds={field.value || []}
-                                onSelectionChange={field.onChange}
+                                onSelectionChange={(ids) => field.onChange(ids)}
                                 lang={settings.language as 'en' | 'es' || 'en'}
                             />
                             <FormMessage />
@@ -334,11 +335,11 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
                   <FormLabel>{t.aiContextLabel}</FormLabel>
                   <FormControl>
                     <div className="futuristic-textarea-wrapper">
-                        <Textarea
+                      <Textarea
                         placeholder={t.aiContextPlaceholder}
                         className="min-h-40"
                         {...field}
-                        />
+                      />
                     </div>
                   </FormControl>
                   <FormDescription>
@@ -360,3 +361,4 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
     </Form>
   );
 }
+

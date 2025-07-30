@@ -131,41 +131,51 @@
 }
 
 .futuristic-textarea-wrapper {
-    @apply relative w-full p-[1px] rounded-lg;
-    background: transparent;
+    @apply relative w-full p-[1px] rounded-lg overflow-hidden;
+    background: hsl(var(--input));
     transition: all 0.3s ease;
 }
 
 .futuristic-textarea-wrapper::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    top: 50%;
+    left: 50%;
+    width: 200%;
+    height: 200%;
     z-index: 0;
     border-radius: inherit;
     background: conic-gradient(
         from 0deg at 50% 50%,
         transparent 0%,
-        transparent 20%,
-        hsl(var(--primary) / 0.8) 25%,
-        hsl(var(--primary) / 0.9) 30%,
-        white 35%,
-        hsl(var(--primary) / 0.9) 40%,
-        hsl(var(--primary) / 0.8) 45%,
-        transparent 50%,
-        transparent 100%
+        transparent 75%,
+        hsl(var(--primary)) 85%,
+        white 95%,
+        hsl(var(--primary)) 100%
     );
+    transform-origin: center;
+    transform: translate(-50%, -50%);
     animation: futuristic-border-spin 2s linear infinite;
     animation-play-state: paused;
+}
+
+.futuristic-textarea-wrapper:focus-within {
+    background: hsl(var(--background));
 }
 
 .futuristic-textarea-wrapper:focus-within::before {
     animation-play-state: running;
 }
 
-.futuristic-textarea-wrapper > * {
+.futuristic-textarea-wrapper > textarea {
     position: relative;
     z-index: 1;
+    margin: 1px;
+    width: calc(100% - 2px);
+    height: calc(100% - 2px);
+    background: hsl(var(--background));
+}
+
+.futuristic-textarea-wrapper:focus-within > textarea {
+   border-color: transparent;
 }
