@@ -124,58 +124,53 @@
   animation: keyframes-animate-in 0.3s ease-out forwards;
 }
 
-@keyframes futuristic-border-spin {
-  to {
-    transform: rotate(360deg);
-  }
+@keyframes radial-border-animation {
+  0% { background-position: 0% 50%; }
+  25% { background-position: 50% 100%; }
+  50% { background-position: 100% 50%; }
+  75% { background-position: 50% 0%; }
+  100% { background-position: 0% 50%; }
 }
 
-.futuristic-textarea-wrapper {
-    @apply relative w-full p-[1px] rounded-lg overflow-hidden;
-    background: hsl(var(--input));
-    transition: all 0.3s ease;
+.radial-border-wrapper {
+  @apply relative w-full p-px rounded-lg overflow-hidden;
+  background-color: hsl(var(--input));
+  transition: all 0.3s ease;
 }
 
-.futuristic-textarea-wrapper::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 200%;
-    height: 200%;
-    z-index: 0;
-    border-radius: inherit;
-    background: conic-gradient(
-        from 0deg at 50% 50%,
-        transparent 0%,
-        transparent 75%,
-        hsl(var(--primary)) 85%,
-        white 95%,
-        hsl(var(--primary)) 100%
-    );
-    transform-origin: center;
-    transform: translate(-50%, -50%);
-    animation: futuristic-border-spin 2s linear infinite;
-    animation-play-state: paused;
+.radial-border-wrapper::before {
+  content: '';
+  position: absolute;
+  top: 0; right: 0; bottom: 0; left: 0;
+  background: radial-gradient(
+    circle at center,
+    hsl(var(--primary) / 0.8),
+    transparent 25%
+  );
+  background-size: 400% 400%;
+  background-position: 50% 0%;
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+  border-radius: inherit;
+  pointer-events: none;
 }
 
-.futuristic-textarea-wrapper:focus-within {
-    background: hsl(var(--background));
+.radial-border-wrapper:focus-within {
+  border-color: transparent;
+  background-color: hsl(var(--background));
 }
 
-.futuristic-textarea-wrapper:focus-within::before {
-    animation-play-state: running;
+.radial-border-wrapper:focus-within::before {
+  opacity: 1;
+  animation: radial-border-animation 4s linear infinite;
 }
 
-.futuristic-textarea-wrapper > textarea {
-    position: relative;
-    z-index: 1;
-    margin: 1px;
-    width: calc(100% - 2px);
-    height: calc(100% - 2px);
-    background: hsl(var(--background));
+.radial-border-wrapper > textarea {
+  @apply relative z-10;
+  background-color: hsl(var(--background));
+  border-radius: calc(var(--radius) - 1px);
 }
 
-.futuristic-textarea-wrapper:focus-within > textarea {
+.radial-border-wrapper:focus-within > textarea {
    border-color: transparent;
 }

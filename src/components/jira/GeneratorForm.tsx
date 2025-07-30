@@ -171,39 +171,38 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
   }, [selectedProject, allTasks, projects]);
 
   useEffect(() => {
-    if (selectedProject) {
-        const activeTaskIds = availableTasks
-          .filter(t => t.status === 'active')
-          .map(t => t.id);
-        setValue('selectedTasks', activeTaskIds, { shouldValidate: true, shouldDirty: true });
+    const activeTaskIds = availableTasks.filter(t => t.status === 'active').map(t => t.id);
+    const optionalSelectedTaskIds = availableTasks
+        .filter(t => t.status === 'optional' && selectedTaskIds.includes(t.id))
+        .map(t => t.id);
+
+    const newSelectedTasks = [...new Set([...activeTaskIds, ...optionalSelectedTaskIds])];
+
+    if (JSON.stringify(newSelectedTasks.sort()) !== JSON.stringify(selectedTaskIds.sort())) {
+        setValue('selectedTasks', newSelectedTasks, { shouldValidate: true, shouldDirty: true });
     }
-  }, [availableTasks, selectedProject, setValue]);
+}, [availableTasks, selectedTaskIds, setValue]);
+
 
   const tasksToDisplay = useMemo(() => {
     if (!selectedProject) return [];
-      return allTasks
+    
+    return allTasks
         .filter(task => {
             const projectInfo = projects.find(p => p.name === selectedProject);
             if (!projectInfo) return false;
-            
-            const isRelevantForProject = !task.projectIds || task.projectIds.length === 0 || task.projectIds.includes(projectInfo.id);
-            if (!isRelevantForProject) return false;
 
-            const isSelected = selectedTaskIds.includes(task.id);
+            const isRelevant = !task.projectIds || task.projectIds.length === 0 || task.projectIds.includes(projectInfo.id);
+            if (!isRelevant) return false;
 
-            if (task.status === 'active') {
-                return true; 
-            }
-            if (task.status === 'optional' && isSelected) {
-                return true;
-            }
-            return false;
+            return task.status === 'active' || task.status === 'optional';
         })
         .map(task => ({
             id: task.id,
             type: task.type,
             display: selectedTaskIds.includes(task.id) ? 'normal' : 'strike',
         }));
+
   }, [allTasks, selectedProject, selectedTaskIds, projects]);
 
  useEffect(() => {
@@ -334,7 +333,7 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
                 <FormItem>
                   <FormLabel>{t.aiContextLabel}</FormLabel>
                   <FormControl>
-                    <div className="futuristic-textarea-wrapper">
+                    <div className="radial-border-wrapper">
                       <Textarea
                         placeholder={t.aiContextPlaceholder}
                         className="min-h-40"
@@ -361,4 +360,3 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
     </Form>
   );
 }
-
