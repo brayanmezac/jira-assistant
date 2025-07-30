@@ -86,14 +86,14 @@ function TasksMultiSelect({
     availableTasks,
     selectedTaskIds,
     onSelectionChange,
-    lang,
+    lang = 'en',
 }: {
     availableTasks: TaskCode[];
     selectedTaskIds: string[];
     onSelectionChange: (ids: string[]) => void;
-    lang: 'en' | 'es';
+    lang?: 'en' | 'es';
 }) {
-    const t = translations[lang || 'en'];
+    const t = translations[lang];
     const [isOpen, setIsOpen] = useState(false);
 
     const handleSelect = (taskId: string) => {
@@ -171,29 +171,40 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
   }, [selectedProject, allTasks, projects]);
 
   useEffect(() => {
-    if (availableTasks.length > 0) {
-      const activeTaskIds = availableTasks
+    if (selectedProject) {
+        const activeTaskIds = availableTasks
           .filter(t => t.status === 'active')
           .map(t => t.id);
-      setValue('selectedTasks', activeTaskIds);
+        setValue('selectedTasks', activeTaskIds);
     }
-  }, [availableTasks, setValue]);
-
+  }, [availableTasks, selectedProject, setValue]);
 
   const tasksToDisplay = useMemo(() => {
-    return availableTasks
-        .map(task => {
+      return allTasks
+        .filter(task => {
+            if (!selectedProject) return false;
+            const projectInfo = projects.find(p => p.name === selectedProject);
+            if (!projectInfo) return false;
+            
+            const isRelevantForProject = !task.projectIds || task.projectIds.length === 0 || task.projectIds.includes(projectInfo.id);
+            if (!isRelevantForProject) return false;
+
             const isSelected = selectedTaskIds.includes(task.id);
+
             if (task.status === 'active') {
-                return { id: task.id, type: task.type, display: isSelected ? 'normal' : 'strike' };
+                return true; // Always show active tasks to be able to strike them through
             }
             if (task.status === 'optional' && isSelected) {
-                return { id: task.id, type: task.type, display: 'normal' };
+                return true; // Show optional tasks only if selected
             }
-            return null;
+            return false;
         })
-        .filter((task): task is { id: string; type: string; display: 'normal' | 'strike' } => task !== null);
-}, [availableTasks, selectedTaskIds]);
+        .map(task => ({
+            id: task.id,
+            type: task.type,
+            display: selectedTaskIds.includes(task.id) ? 'normal' : 'strike',
+        }));
+  }, [allTasks, selectedProject, selectedTaskIds, projects]);
 
  useEffect(() => {
       if (!user) return;
