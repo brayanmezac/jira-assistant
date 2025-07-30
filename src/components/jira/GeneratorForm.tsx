@@ -333,15 +333,15 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>{t.aiContextLabel}</FormLabel>
-                  <div className={cn("animated-border-wrapper", isAiContextFocused && "focused")}>
+                   <div className={cn("animated-border-wrapper", isAiContextFocused && "focused")}>
                     <FormControl>
-                      <Textarea
-                        placeholder={t.aiContextPlaceholder}
-                        className="min-h-40"
-                        {...field}
-                        onFocus={() => setIsAiContextFocused(true)}
-                        onBlur={() => setIsAiContextFocused(false)}
-                      />
+                        <Textarea
+                            placeholder={t.aiContextPlaceholder}
+                            className="min-h-40 textarea"
+                            {...field}
+                            onFocus={() => setIsAiContextFocused(true)}
+                            onBlur={() => setIsAiContextFocused(false)}
+                        />
                     </FormControl>
                   </div>
                   <FormDescription>
@@ -363,5 +363,3 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
     </Form>
   );
 }
-
-    

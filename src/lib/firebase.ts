@@ -1,8 +1,8 @@
 
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore, collection, getDocs, doc, addDoc, updateDoc, deleteDoc, type DocumentData, type WithFieldValue, setDoc, getDoc, query, where, orderBy, writeBatch } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, doc, addDoc, updateDoc, deleteDoc, type DocumentData, type WithFieldValue, setDoc, getDoc, query, where, orderBy, writeBatch, Timestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
-import type { ProjectCode, TaskCode, JiraSettings } from './types';
+import type { ProjectCode, TaskCode, JiraSettings, GenerationHistoryEntry } from './types';
 
 const firebaseConfig = {
   projectId: 'jira-assist-fpy59',
@@ -126,3 +126,23 @@ export async function deleteTaskCode(id: string) {
     await deleteDoc(docRef);
 }
 
+// Generation History - User-specific
+export async function addGenerationHistory(
+    historyData: Omit<GenerationHistoryEntry, 'id' | 'createdAt'>
+) {
+    const dataWithTimestamp = {
+        ...historyData,
+        createdAt: Timestamp.now(),
+    };
+    await addDoc(collection(db, 'generationHistory'), dataWithTimestamp);
+}
+
+export async function getGenerationHistory(userId: string): Promise<GenerationHistoryEntry[]> {
+    const q = query(
+        collection(db, 'generationHistory'),
+        where('userId', '==', userId),
+        orderBy('createdAt', 'desc')
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => docToTyped<GenerationHistoryEntry>(doc));
+}

@@ -9,7 +9,8 @@ import {
   jiraIssueTypeSchema,
   type TaskCode,
 } from '@/lib/types';
-import { getTaskCodes, getProjectCodes, getProjectCode } from '@/lib/firebase';
+import { getTaskCodes, getProjectCodes, getProjectCode, addGenerationHistory } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
 
 export type FormState = {
   success: boolean;
@@ -199,6 +200,7 @@ export async function generateJiraTicketsAction(
                 status: task.status,
                 projectIds: task.projectIds || [],
                 template: processedTemplate, // Use the processed template content
+                order: task.order || 0,
             };
         })
     );
@@ -225,6 +227,7 @@ export async function generateJiraTicketsAction(
 }
 
 const createJiraTicketsInput = z.object({
+  userId: z.string(),
   storySummary: z.string(),
   storyNumber: z.number(),
   storyDescription: z.string(),
@@ -248,6 +251,7 @@ export async function createJiraTickets(
   input: CreateJiraTicketsInput
 ): Promise<JiraResult> {
   const {
+    userId,
     storySummary,
     storyNumber,
     storyDescription,
@@ -341,6 +345,20 @@ export async function createJiraTickets(
         console.warn(`[JIRA WARN] Failed to create subtask "${subtask.name}": ${errorData}`);
       }
     }
+    
+    // Add to history after successful creation
+    const hasUsedAi = (storyDescription.includes('<AI') && aiContext.trim().length > 0) || tasks.some(t => t.template?.includes('<AI') && aiContext.trim().length > 0);
+    
+    await addGenerationHistory({
+        userId,
+        storyName: storySummary,
+        jiraLink: `${url}/browse/${storyKey}`,
+        tasks: tasks.map(t => t.name),
+        aiUsed: hasUsedAi,
+        aiModel: hasUsedAi ? 'OpenAI' : undefined, // Placeholder, can be enhanced
+        aiCost: 0, // Placeholder
+    });
+
 
     return {
       success: true,

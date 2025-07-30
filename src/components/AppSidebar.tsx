@@ -16,7 +16,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from '@/components/ui/sidebar';
-import { Home, Settings, Tags, LogOut, Code, Brackets, LifeBuoy } from 'lucide-react';
+import { Home, Settings, Tags, LogOut, Code, Brackets, LifeBuoy, History } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
@@ -30,6 +30,7 @@ import { useSettings } from '@/hooks/use-settings';
 const translations = {
   en: {
     generator: 'Generator',
+    history: 'History',
     codes: 'Codes',
     projectCodes: 'Project Codes',
     taskCodes: 'Task Codes',
@@ -39,6 +40,7 @@ const translations = {
   },
   es: {
     generator: 'Generador',
+    history: 'Historial',
     codes: 'Códigos',
     projectCodes: 'Códigos de Proyecto',
     taskCodes: 'Códigos de Tarea',
@@ -73,6 +75,19 @@ export function AppSidebar({ children }: { children: ReactNode }) {
                 <Link href="/">
                   <Home />
                   <span>{t.generator}</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+
+             <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname.startsWith('/history')}
+                tooltip={{ children: t.history }}
+              >
+                <Link href="/history">
+                  <History />
+                  <span>{t.history}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

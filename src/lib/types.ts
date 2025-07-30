@@ -1,5 +1,6 @@
 
 import { z } from 'zod';
+import { Timestamp } from 'firebase/firestore';
 
 export const jiraStoryFormSchema = z.object({
   name: z.string().min(3, { message: 'Story name must be at least 3 characters.' }),
@@ -49,3 +50,15 @@ export const jiraIssueTypeSchema = z.object({
     iconUrl: z.string().url(),
     hierarchyLevel: z.number(),
 });
+
+export const generationHistorySchema = z.object({
+    userId: z.string(),
+    createdAt: z.instanceof(Timestamp),
+    storyName: z.string(),
+    jiraLink: z.string().url(),
+    tasks: z.array(z.string()),
+    aiUsed: z.boolean(),
+    aiModel: z.string().optional(),
+    aiCost: z.number().optional(),
+});
+export type GenerationHistoryEntry = z.infer<typeof generationHistorySchema> & { id: string };

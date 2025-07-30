@@ -11,6 +11,7 @@ import { useSettings } from '@/hooks/use-settings';
 import { createJiraTickets } from '@/app/actions';
 import type { TaskCode } from '@/lib/types';
 import { renderJiraMarkup } from '@/lib/jira-markup-renderer';
+import { useAuth } from '../auth/AuthProvider';
 
 type GeneratedContentProps = {
   storyDescription: string;
@@ -80,6 +81,7 @@ function ContentDisplay({ content, onCopy }: { content: string, onCopy: () => vo
 export function GeneratedContent({ storyDescription, storyName, projectKey, storyNumber, tasks, aiContext }: GeneratedContentProps) {
   const { toast } = useToast();
   const [isCreating, setIsCreating] = useState(false);
+  const { user } = useAuth();
   const { settings } = useSettings();
   const t = translations[settings.language as keyof typeof translations] || translations.en;
   
@@ -150,6 +152,16 @@ export function GeneratedContent({ storyDescription, storyName, projectKey, stor
   const handleCreateInJira = async () => {
     setIsCreating(true);
     
+    if (!user) {
+        toast({
+            variant: 'destructive',
+            title: 'Authentication Error',
+            description: 'You must be logged in to create tickets.',
+        });
+        setIsCreating(false);
+        return;
+    }
+
     if (!settings.url || !settings.email || !settings.token) {
         toast({
           variant: 'destructive',
@@ -164,6 +176,7 @@ export function GeneratedContent({ storyDescription, storyName, projectKey, stor
     
     try {
         const result = await createJiraTickets({
+            userId: user.uid,
             storySummary: storySummary,
             storyNumber: storyNumber,
             storyDescription: storyDescription,
