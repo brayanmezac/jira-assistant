@@ -123,3 +123,62 @@
 .animate-in-chat {
   animation: keyframes-animate-in 0.3s ease-out forwards;
 }
+
+@keyframes border-spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.animated-gradient-border-wrapper {
+    position: relative;
+    border-radius: 0.375rem; /* same as .rounded-md */
+    overflow: hidden;
+    padding: 2px; /* This padding creates the border thickness */
+    background: hsl(var(--border));
+    transition: all 0.2s ease-in-out;
+}
+
+.animated-gradient-border-wrapper::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 200%; /* Make the gradient larger than the container */
+    height: 200%;
+    background: conic-gradient(
+        from 0deg,
+        transparent 0%,
+        transparent 60%,
+        hsl(var(--primary)) 80%,
+        hsl(var(--primary) / 0.8) 95%,
+        transparent 100%
+    );
+    animation: border-spin 4s linear infinite;
+    animation-play-state: paused;
+}
+
+/* When the textarea inside is focused, run the animation */
+.animated-gradient-border-wrapper:focus-within {
+    background: transparent;
+}
+
+.animated-gradient-border-wrapper:focus-within::before {
+    animation-play-state: running;
+}
+
+.animated-gradient-border-wrapper textarea {
+    /* Ensure the textarea has no border itself to not conflict */
+    border: none !important;
+    border-radius: calc(0.375rem - 2px); /* a bit smaller than the wrapper to not cover the border */
+    outline: none !important;
+    box-shadow: none !important;
+    /* We add a background to the textarea to hide the part of the gradient behind it */
+    background-color: hsl(var(--background));
+}
+
+.dark .animated-gradient-border-wrapper textarea {
+    background-color: hsl(var(--background));
+}
+

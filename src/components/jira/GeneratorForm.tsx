@@ -332,13 +332,15 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>{t.aiContextLabel}</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder={t.aiContextPlaceholder}
-                      className="min-h-40 focus:border-primary focus:ring-2 focus:ring-primary/50"
-                      {...field}
-                    />
-                  </FormControl>
+                   <div className="animated-gradient-border-wrapper">
+                        <FormControl>
+                            <Textarea
+                            placeholder={t.aiContextPlaceholder}
+                            className="min-h-40"
+                            {...field}
+                            />
+                        </FormControl>
+                   </div>
                   <FormDescription>
                     {t.aiContextDescription}
                   </FormDescription>
