@@ -811,10 +811,12 @@ export function TaskCodes({ initialTasks, userProjects }: { initialTasks: TaskCo
                       <TableCell>
                           <GripVertical className='text-muted-foreground' />
                       </TableCell>
-                      <TableCell className="font-medium flex items-center gap-2">
-                        {task.iconUrl && <Image src={task.iconUrl} alt={task.name} width={16} height={16} unoptimized />}
-                        {task.name}
-                        </TableCell>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {task.iconUrl && <Image src={task.iconUrl} alt={task.name} width={16} height={16} unoptimized />}
+                          {task.name}
+                        </div>
+                      </TableCell>
                       <TableCell>{task.type}</TableCell>
                       <TableCell className="text-muted-foreground">{task.code}</TableCell>
                        <TableCell>
@@ -827,7 +829,7 @@ export function TaskCodes({ initialTasks, userProjects }: { initialTasks: TaskCo
                             </div>
                         ) : (<Badge variant="outline">{t.general}</Badge>)}
                       </TableCell>
-                      <TableCell className="text-right space-x-1">
+                      <TableCell className="text-right space-x-1 whitespace-nowrap">
                         <StatusButton task={task} onStatusChange={handleStatusChange} />
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-500 hover:text-blue-500 hover:bg-blue-500/10" asChild title={t.editTemplate}>
                             <Link href={`/codes/tasks/${task.id}/template`}>
