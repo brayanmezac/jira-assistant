@@ -152,6 +152,7 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
   const { settings } = useSettings();
   const { user } = useAuth();
   const t = translations[settings.language as 'en' | 'es'] || translations.en;
+  const [isAiContextFocused, setIsAiContextFocused] = useState(false);
     
   const form = useFormContext<z.infer<typeof jiraStoryFormSchema>>();
   const { control, watch, setValue } = form;
@@ -332,15 +333,17 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>{t.aiContextLabel}</FormLabel>
-                   <div className="animated-gradient-border-wrapper">
-                        <FormControl>
-                            <Textarea
-                            placeholder={t.aiContextPlaceholder}
-                            className="min-h-40"
-                            {...field}
-                            />
-                        </FormControl>
-                   </div>
+                  <div className={cn("animated-border-wrapper", isAiContextFocused && "focused")}>
+                    <FormControl>
+                      <Textarea
+                        placeholder={t.aiContextPlaceholder}
+                        className="min-h-40"
+                        {...field}
+                        onFocus={() => setIsAiContextFocused(true)}
+                        onBlur={() => setIsAiContextFocused(false)}
+                      />
+                    </FormControl>
+                  </div>
                   <FormDescription>
                     {t.aiContextDescription}
                   </FormDescription>
@@ -360,3 +363,5 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
     </Form>
   );
 }
+
+    
