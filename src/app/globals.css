@@ -176,6 +176,8 @@
     box-shadow: none !important;
     /* We add a background to the textarea to hide the part of the gradient behind it */
     background-color: hsl(var(--background));
+    position: relative;
+    z-index: 1;
 }
 
 .dark .animated-gradient-border-wrapper textarea {
