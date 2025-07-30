@@ -86,14 +86,14 @@ function TasksMultiSelect({
     availableTasks,
     selectedTaskIds,
     onSelectionChange,
-    lang = 'en'
+    lang,
 }: {
     availableTasks: TaskCode[];
     selectedTaskIds: string[];
     onSelectionChange: (ids: string[]) => void;
     lang: 'en' | 'es';
 }) {
-    const t = translations[lang] || translations.en;
+    const t = translations[lang || 'en'];
     const [isOpen, setIsOpen] = useState(false);
 
     const handleSelect = (taskId: string) => {
@@ -151,7 +151,7 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
   const [allTasks, setAllTasks] = useState<TaskCode[]>([]);
   const { settings } = useSettings();
   const { user } = useAuth();
-  const t = translations[settings.language as keyof typeof translations] || translations.en;
+  const t = translations[settings.language as 'en' | 'es'] || translations.en;
     
   const form = useFormContext<z.infer<typeof jiraStoryFormSchema>>();
   const { control, watch, setValue } = form;
@@ -171,23 +171,12 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
   }, [selectedProject, allTasks, projects]);
 
   useEffect(() => {
-      if (!user) return;
-      const fetchProjectsAndTasks = async () => {
-          const [projectList, taskList] = await Promise.all([
-              getProjectCodes(user.uid),
-              getTaskCodes(user.uid)
-          ]);
-          setProjects(projectList);
-          setAllTasks(taskList);
-      };
-      fetchProjectsAndTasks();
-  }, [user]);
-
-  useEffect(() => {
-    const activeTaskIds = availableTasks
-        .filter(t => t.status === 'active')
-        .map(t => t.id);
-    setValue('selectedTasks', activeTaskIds);
+    if (availableTasks.length > 0) {
+      const activeTaskIds = availableTasks
+          .filter(t => t.status === 'active')
+          .map(t => t.id);
+      setValue('selectedTasks', activeTaskIds);
+    }
   }, [availableTasks, setValue]);
 
 
@@ -205,6 +194,19 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
         })
         .filter((task): task is { id: string; type: string; display: 'normal' | 'strike' } => task !== null);
 }, [availableTasks, selectedTaskIds]);
+
+ useEffect(() => {
+      if (!user) return;
+      const fetchProjectsAndTasks = async () => {
+          const [projectList, taskList] = await Promise.all([
+              getProjectCodes(user.uid),
+              getTaskCodes(user.uid)
+          ]);
+          setProjects(projectList);
+          setAllTasks(taskList);
+      };
+      fetchProjectsAndTasks();
+  }, [user]);
 
   return (
     <Form {...form}>
@@ -295,7 +297,7 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
                                 availableTasks={availableTasks}
                                 selectedTaskIds={field.value || []}
                                 onSelectionChange={field.onChange}
-                                lang={settings.language as 'en' | 'es'}
+                                lang={settings.language as 'en' | 'es' || 'en'}
                             />
                             <FormMessage />
                         </FormItem>
@@ -320,10 +322,10 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
                 <FormItem>
                   <FormLabel>{t.aiContextLabel}</FormLabel>
                   <FormControl>
-                    <div className="textarea-glare">
+                    <div className="futuristic-textarea-wrapper">
                         <Textarea
                         placeholder={t.aiContextPlaceholder}
-                        className="min-h-40 transition-all duration-300 focus-visible:shadow-[0_0_15px_hsl(var(--primary)/0.5)] focus-visible:ring-primary"
+                        className="min-h-40"
                         {...field}
                         />
                     </div>
