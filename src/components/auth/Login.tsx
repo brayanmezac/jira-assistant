@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -87,10 +88,11 @@ export function Login() {
         password
       );
       // Create a document for the user in Firestore to link auth with DB records
+      // This is crucial for Firestore security rules to work correctly.
       await setDoc(doc(db, 'users', userCredential.user.uid), {
         email: userCredential.user.email,
+        displayName: userCredential.user.email, // Default display name to email
         createdAt: new Date(),
-        // You can add any default user settings here
       });
       // AuthProvider will handle the redirect after successful registration
     } catch (manualError: any) {
