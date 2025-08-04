@@ -36,18 +36,18 @@ export function JiraGenerator() {
       number: undefined,
       project: '',
       userId: user?.uid || '',
+      selectedTasks: [],
     },
   });
   
   const watchedValues = form.watch();
 
   useEffect(() => {
-    if (user) {
+    if (user && form.getValues('userId') !== user.uid) {
       form.reset({
         ...form.getValues(),
         userId: user.uid,
       });
-      setFormKey(Date.now());
     }
   }, [user, form]);
   

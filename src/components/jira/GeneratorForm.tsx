@@ -155,7 +155,7 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
   const [isAiContextFocused, setIsAiContextFocused] = useState(false);
     
   const form = useFormContext<z.infer<typeof jiraStoryFormSchema>>();
-  const { control, watch, setValue } = form;
+  const { control, watch, setValue, register } = form;
   const selectedProject = watch('project');
   const selectedTaskIds = watch('selectedTasks') || [];
 
@@ -224,7 +224,7 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
   return (
     <Form {...form}>
       <form action={formAction} className="space-y-6">
-        <input type="hidden" {...form.register('userId')} />
+        <input type="hidden" {...register('userId')} value={user?.uid || ''} />
         {selectedTaskIds.map(id => <input key={id} type="hidden" name="selectedTasks" value={id} />)}
         
         <Card>
