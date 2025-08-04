@@ -20,6 +20,7 @@ type GeneratedContentProps = {
   storyNumber: number;
   tasks: TaskCode[];
   aiContext: string;
+  userId: string;
 };
 
 const translations = {
@@ -78,10 +79,9 @@ function ContentDisplay({ content, onCopy }: { content: string, onCopy: () => vo
   );
 }
 
-export function GeneratedContent({ storyDescription, storyName, projectKey, storyNumber, tasks, aiContext }: GeneratedContentProps) {
+export function GeneratedContent({ storyDescription, storyName, projectKey, storyNumber, tasks, aiContext, userId }: GeneratedContentProps) {
   const { toast } = useToast();
   const [isCreating, setIsCreating] = useState(false);
-  const { user } = useAuth();
   const { settings } = useSettings();
   const t = translations[settings.language as keyof typeof translations] || translations.en;
   
@@ -152,7 +152,7 @@ export function GeneratedContent({ storyDescription, storyName, projectKey, stor
   const handleCreateInJira = async () => {
     setIsCreating(true);
     
-    if (!user) {
+    if (!userId) {
         toast({
             variant: 'destructive',
             title: 'Authentication Error',
@@ -175,8 +175,7 @@ export function GeneratedContent({ storyDescription, storyName, projectKey, stor
     const storySummary = `${projectKey}_${storyNumber} - ${storyName}`;
     
     try {
-        const result = await createJiraTickets({
-            userId: user.uid,
+        const result = await createJiraTickets(userId, {
             storySummary: storySummary,
             storyNumber: storyNumber,
             storyDescription: storyDescription,

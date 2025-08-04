@@ -44,10 +44,7 @@ export function JiraGenerator() {
 
   useEffect(() => {
     if (user && form.getValues('userId') !== user.uid) {
-      form.reset({
-        ...form.getValues(),
-        userId: user.uid,
-      });
+      form.setValue('userId', user.uid);
     }
   }, [user, form]);
   
@@ -72,6 +69,7 @@ export function JiraGenerator() {
           storyNumber={state.data.storyNumber}
           tasks={state.data.tasks}
           aiContext={watchedValues.description || ''}
+          userId={state.data.userId}
         />
       ) : !state.success && state.message && form.formState.isSubmitted && !form.formState.isDirty ? (
         <Alert variant="destructive" className="mt-8">

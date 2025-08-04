@@ -21,6 +21,7 @@ export type FormState = {
     projectKey: string;
     storyNumber: number;
     tasks: TaskCode[];
+    userId: string;
   };
 };
 
@@ -215,6 +216,7 @@ export async function generateJiraTicketsAction(
         projectKey: projectKey,
         storyNumber: number,
         tasks: sanitizedTasks,
+        userId: userId,
       },
     };
   } catch (error: any) {
@@ -226,8 +228,7 @@ export async function generateJiraTicketsAction(
   }
 }
 
-const createJiraTicketsInput = z.object({
-  userId: z.string(),
+const createJiraTicketsPayload = z.object({
   storySummary: z.string(),
   storyNumber: z.number(),
   storyDescription: z.string(),
@@ -237,7 +238,7 @@ const createJiraTicketsInput = z.object({
   aiContext: z.string(),
 });
 
-type CreateJiraTicketsInput = z.infer<typeof createJiraTicketsInput>;
+type CreateJiraTicketsPayload = z.infer<typeof createJiraTicketsPayload>;
 
 type JiraResult = {
   success: boolean;
@@ -248,10 +249,10 @@ type JiraResult = {
 };
 
 export async function createJiraTickets(
-  input: CreateJiraTicketsInput
+  userId: string,
+  payload: CreateJiraTicketsPayload
 ): Promise<JiraResult> {
   const {
-    userId,
     storySummary,
     storyNumber,
     storyDescription,
@@ -259,8 +260,15 @@ export async function createJiraTickets(
     settings,
     tasks,
     aiContext,
-  } = input;
+  } = payload;
   const { url, email, token, storyIssueTypeId } = settings;
+  
+  if (!userId) {
+     return {
+      success: false,
+      message: 'User not authenticated.',
+    };
+  }
 
   if (!url || !email || !token) {
     return {
@@ -350,6 +358,7 @@ export async function createJiraTickets(
     const hasUsedAi = (storyDescription.includes('<AI') && aiContext.trim().length > 0) || tasks.some(t => t.template?.includes('<AI') && aiContext.trim().length > 0);
     
     const historyPayload: any = {
+        userId: userId,
         storyName: storySummary,
         jiraLink: `${url}/browse/${storyKey}`,
         tasks: tasks.map(t => t.name),
@@ -361,7 +370,7 @@ export async function createJiraTickets(
         historyPayload.aiModel = 'OpenAI'; // Placeholder, can be enhanced
     }
 
-    await addGenerationHistory(userId, historyPayload);
+    await addGenerationHistory(historyPayload);
 
 
     return {
