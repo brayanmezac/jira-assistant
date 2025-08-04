@@ -26,7 +26,7 @@ import { useRouter } from 'next/navigation';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Separator } from '../ui/separator';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 
 export function Login() {
   const [isSigningIn, setIsSigningIn] = useState(false);
@@ -49,14 +49,20 @@ export function Login() {
         const result = await getRedirectResult(auth);
         if (result) {
           // User is signed in via redirect. AuthProvider will handle the redirect to '/'.
-          // Create user doc on first Google Sign-in if it doesn't exist.
-           const userDocRef = doc(db, 'users', result.user.uid);
-           await setDoc(userDocRef, {
-                email: result.user.email,
-                displayName: result.user.displayName,
-                createdAt: serverTimestamp(),
-                photoURL: result.user.photoURL,
-           }, { merge: true }); // Merge to avoid overwriting existing data
+          // Ensure a user document exists on every sign-in.
+          const userDocRef = doc(db, 'users', result.user.uid);
+          // Use { merge: true } to create the doc if it doesn't exist,
+          // or to update it without overwriting existing fields like `createdAt`.
+          await setDoc(
+            userDocRef,
+            {
+              email: result.user.email,
+              displayName: result.user.displayName,
+              photoURL: result.user.photoURL,
+              lastLoginAt: serverTimestamp(),
+            },
+            { merge: true }
+          );
         }
       } catch (redirectError: any) {
         console.error('Error getting redirect result:', redirectError);
@@ -95,13 +101,14 @@ export function Login() {
         email,
         password
       );
-      // **FIX**: Create a document for the user in Firestore to link auth with DB records
+      // Create a document for the user in Firestore to link auth with DB records.
       // This is crucial for Firestore security rules to work correctly.
       const userDocRef = doc(db, 'users', userCredential.user.uid);
       await setDoc(userDocRef, {
         email: userCredential.user.email,
         displayName: userCredential.user.email?.split('@')[0] || 'New User', // Default display name
         createdAt: serverTimestamp(),
+        lastLoginAt: serverTimestamp(),
       });
       // AuthProvider will handle the redirect after successful registration
     } catch (manualError: any) {
@@ -116,7 +123,12 @@ export function Login() {
     setIsSigningIn(true);
     setError(null);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      // On manual login, also ensure the user doc exists.
+      const userDocRef = doc(db, 'users', userCredential.user.uid);
+      await setDoc(userDocRef, {
+        lastLoginAt: serverTimestamp(),
+      }, { merge: true });
       // AuthProvider will handle the redirect
     } catch (manualError: any) {
       setError(`Login failed: ${manualError.message}`);
