@@ -26,7 +26,7 @@ import { useRouter } from 'next/navigation';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Separator } from '../ui/separator';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 export function Login() {
   const [isSigningIn, setIsSigningIn] = useState(false);
@@ -49,6 +49,14 @@ export function Login() {
         const result = await getRedirectResult(auth);
         if (result) {
           // User is signed in via redirect. AuthProvider will handle the redirect to '/'.
+          // Create user doc on first Google Sign-in if it doesn't exist.
+           const userDocRef = doc(db, 'users', result.user.uid);
+           await setDoc(userDocRef, {
+                email: result.user.email,
+                displayName: result.user.displayName,
+                createdAt: serverTimestamp(),
+                photoURL: result.user.photoURL,
+           }, { merge: true }); // Merge to avoid overwriting existing data
         }
       } catch (redirectError: any) {
         console.error('Error getting redirect result:', redirectError);
@@ -87,12 +95,13 @@ export function Login() {
         email,
         password
       );
-      // Create a document for the user in Firestore to link auth with DB records
+      // **FIX**: Create a document for the user in Firestore to link auth with DB records
       // This is crucial for Firestore security rules to work correctly.
-      await setDoc(doc(db, 'users', userCredential.user.uid), {
+      const userDocRef = doc(db, 'users', userCredential.user.uid);
+      await setDoc(userDocRef, {
         email: userCredential.user.email,
-        displayName: userCredential.user.email, // Default display name to email
-        createdAt: new Date(),
+        displayName: userCredential.user.email?.split('@')[0] || 'New User', // Default display name
+        createdAt: serverTimestamp(),
       });
       // AuthProvider will handle the redirect after successful registration
     } catch (manualError: any) {
