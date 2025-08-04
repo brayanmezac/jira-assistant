@@ -346,24 +346,23 @@ export async function createJiraTickets(
       }
     }
     
-    // Temporarily disabled history saving to fix permission errors.
-    // // Add to history after successful creation
-    // const hasUsedAi = (storyDescription.includes('<AI') && aiContext.trim().length > 0) || tasks.some(t => t.template?.includes('<AI') && aiContext.trim().length > 0);
+    // Add to history after successful creation
+    const hasUsedAi = (storyDescription.includes('<AI') && aiContext.trim().length > 0) || tasks.some(t => t.template?.includes('<AI') && aiContext.trim().length > 0);
     
-    // const historyPayload: any = {
-    //     userId: userId,
-    //     storyName: storySummary,
-    //     jiraLink: `${url}/browse/${storyKey}`,
-    //     tasks: tasks.map(t => t.name),
-    //     aiUsed: hasUsedAi,
-    //     aiCost: 0, // Placeholder
-    // };
+    const historyPayload: any = {
+        userId: userId,
+        storyName: storySummary,
+        jiraLink: `${url}/browse/${storyKey}`,
+        tasks: tasks.map(t => t.name),
+        aiUsed: hasUsedAi,
+        aiCost: 0, // Placeholder
+    };
 
-    // if (hasUsedAi) {
-    //     historyPayload.aiModel = 'OpenAI'; // Placeholder, can be enhanced
-    // }
+    if (hasUsedAi) {
+        historyPayload.aiModel = 'OpenAI'; // Placeholder, can be enhanced
+    }
 
-    // await addGenerationHistory(historyPayload);
+    await addGenerationHistory(historyPayload);
 
 
     return {
