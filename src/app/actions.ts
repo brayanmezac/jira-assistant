@@ -350,7 +350,7 @@ export async function createJiraTickets(
     const hasUsedAi = (storyDescription.includes('<AI') && aiContext.trim().length > 0) || tasks.some(t => t.template?.includes('<AI') && aiContext.trim().length > 0);
     
     const historyPayload: any = {
-        userId,
+        userId: userId, // Pass the userId from the input
         storyName: storySummary,
         jiraLink: `${url}/browse/${storyKey}`,
         tasks: tasks.map(t => t.name),
