@@ -236,6 +236,7 @@ const createJiraTicketsPayload = z.object({
   settings: jiraSettingsSchema,
   tasks: z.array(z.any()),
   aiContext: z.string(),
+  userId: z.string(),
 });
 
 type CreateJiraTicketsPayload = z.infer<typeof createJiraTicketsPayload>;
@@ -249,7 +250,6 @@ type JiraResult = {
 };
 
 export async function createJiraTickets(
-  userId: string,
   payload: CreateJiraTicketsPayload
 ): Promise<JiraResult> {
   const {
@@ -260,6 +260,7 @@ export async function createJiraTickets(
     settings,
     tasks,
     aiContext,
+    userId,
   } = payload;
   const { url, email, token, storyIssueTypeId } = settings;
   
@@ -370,7 +371,7 @@ export async function createJiraTickets(
         historyPayload.aiModel = 'OpenAI'; // Placeholder, can be enhanced
     }
 
-    await addGenerationHistory(historyPayload);
+    await addGenerationHistory(userId, historyPayload);
 
 
     return {

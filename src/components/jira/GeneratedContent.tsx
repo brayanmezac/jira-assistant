@@ -175,7 +175,8 @@ export function GeneratedContent({ storyDescription, storyName, projectKey, stor
     const storySummary = `${projectKey}_${storyNumber} - ${storyName}`;
     
     try {
-        const result = await createJiraTickets(userId, {
+        const result = await createJiraTickets({
+            userId: userId,
             storySummary: storySummary,
             storyNumber: storyNumber,
             storyDescription: storyDescription,
