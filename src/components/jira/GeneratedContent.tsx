@@ -171,19 +171,17 @@ export function GeneratedContent({ storyDescription, storyName, projectKey, stor
         setIsCreating(false);
         return;
     }
-
-    const storySummary = `${projectKey}_${storyNumber} - ${storyName}`;
     
     try {
         const result = await createJiraTickets({
-            userId: userId,
-            storySummary: storySummary,
-            storyNumber: storyNumber,
-            storyDescription: storyDescription,
-            projectKey: projectKey,
-            settings: settings,
-            tasks: tasks,
-            aiContext: aiContext,
+            userId,
+            storyName,
+            storyNumber,
+            storyDescription,
+            projectKey,
+            settings,
+            tasks,
+            aiContext,
         });
 
         if (result.success && result.data) {

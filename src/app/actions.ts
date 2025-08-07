@@ -22,6 +22,7 @@ export type FormState = {
     storyNumber: number;
     tasks: TaskCode[];
     userId: string;
+    aiContext: string;
   };
 };
 
@@ -217,6 +218,7 @@ export async function generateJiraTicketsAction(
         storyNumber: number,
         tasks: sanitizedTasks,
         userId: userId,
+        aiContext: aiContext,
       },
     };
   } catch (error: any) {
@@ -229,7 +231,7 @@ export async function generateJiraTicketsAction(
 }
 
 const createJiraTicketsPayload = z.object({
-  storySummary: z.string(),
+  storyName: z.string(),
   storyNumber: z.number(),
   storyDescription: z.string(),
   projectKey: z.string(),
@@ -253,7 +255,7 @@ export async function createJiraTickets(
   payload: CreateJiraTicketsPayload
 ): Promise<JiraResult> {
   const {
-    storySummary,
+    storyName,
     storyNumber,
     storyDescription,
     projectKey,
@@ -292,6 +294,8 @@ export async function createJiraTickets(
   };
 
   try {
+    const storySummary = `${projectKey}_${storyNumber} - ${storyName}`;
+
     const storyPayload = {
       fields: {
         project: { key: projectKey },
@@ -355,7 +359,6 @@ export async function createJiraTickets(
       }
     }
     
-    // Add to history after successful creation
     const hasUsedAi = (storyDescription.includes('<AI') && aiContext.trim().length > 0) || tasks.some(t => t.template?.includes('<AI') && aiContext.trim().length > 0);
     
     const historyPayload: any = {
@@ -364,11 +367,11 @@ export async function createJiraTickets(
         jiraLink: `${url}/browse/${storyKey}`,
         tasks: tasks.map(t => t.name),
         aiUsed: hasUsedAi,
-        aiCost: 0, // Placeholder
+        aiCost: 0,
     };
 
     if (hasUsedAi) {
-        historyPayload.aiModel = 'OpenAI'; // Placeholder, can be enhanced
+        historyPayload.aiModel = 'OpenAI';
     }
 
     await addGenerationHistory(historyPayload);

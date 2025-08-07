@@ -40,8 +40,6 @@ export function JiraGenerator() {
     },
   });
   
-  const watchedValues = form.watch();
-
   useEffect(() => {
     if (user && form.getValues('userId') !== user.uid) {
       form.setValue('userId', user.uid);
@@ -68,7 +66,7 @@ export function JiraGenerator() {
           projectKey={state.data.projectKey}
           storyNumber={state.data.storyNumber}
           tasks={state.data.tasks}
-          aiContext={watchedValues.description || ''}
+          aiContext={state.data.aiContext}
           userId={state.data.userId}
         />
       ) : !state.success && state.message && form.formState.isSubmitted && !form.formState.isDirty ? (
