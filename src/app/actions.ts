@@ -371,7 +371,7 @@ export async function createJiraTickets(
         historyPayload.aiModel = 'OpenAI'; // Placeholder, can be enhanced
     }
 
-    await addGenerationHistory(userId, historyPayload);
+    await addGenerationHistory(historyPayload);
 
 
     return {
