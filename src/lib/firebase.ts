@@ -126,7 +126,7 @@ export async function deleteTaskCode(id: string) {
     await deleteDoc(docRef);
 }
 
-// Generation History - User-specific
+// Generation History - Global
 export async function addGenerationHistory(
   historyPayload: WithFieldValue<Omit<GenerationHistoryEntry, 'id' | 'createdAt'>>
 ) {
@@ -137,10 +137,9 @@ export async function addGenerationHistory(
     await addDoc(collection(db, 'generationHistory'), dataWithTimestamp);
 }
 
-export async function getGenerationHistory(userId: string): Promise<GenerationHistoryEntry[]> {
+export async function getGenerationHistory(): Promise<GenerationHistoryEntry[]> {
     const q = query(
         collection(db, 'generationHistory'),
-        where('userId', '==', userId),
         orderBy('createdAt', 'desc')
     );
     const snapshot = await getDocs(q);

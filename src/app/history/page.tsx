@@ -58,10 +58,13 @@ export default function HistoryPage() {
   const t = translations[settings.language as keyof typeof translations] || translations.en;
 
   useEffect(() => {
+    // Only load history if a user is logged in
     if (!user) return;
+    
     async function loadData() {
       try {
-        const historyData = await getGenerationHistory(user.uid);
+        // Fetch all generation history, not just for the current user
+        const historyData = await getGenerationHistory();
         setHistory(historyData);
       } catch (error) {
         console.error("Failed to load generation history:", error);
