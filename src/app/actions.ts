@@ -159,9 +159,17 @@ export async function generateJiraTicketsAction(
     };
   }
   
+  let debugInfo = {
+      userId,
+      project,
+      projectsLoaded: 'pending',
+      tasksLoaded: 'pending',
+  };
+
   try {
     const userProjects = await getProjectCodesForUser(userId);
-    
+    debugInfo.projectsLoaded = `ok (${userProjects.length})`;
+
     const projectInfo = userProjects.find((p) => p.name === project);
 
     if (!projectInfo || !projectInfo.id) {
@@ -179,14 +187,13 @@ export async function generateJiraTicketsAction(
     const projectKey = projectInfo.code;
     
     const userTasks = await getTaskCodesForUser(userId);
+    debugInfo.tasksLoaded = `ok (${userTasks.length})`;
 
     const relevantTasks = userTasks.filter(task => 
       selectedTasks.includes(task.id) &&
       (!task.projectIds || task.projectIds.length === 0 || task.projectIds.includes(projectInfo.id))
     );
 
-    // Sanitize tasks for serialization before sending to the client,
-    // and pre-process their templates.
     const sanitizedTasks: TaskCode[] = await Promise.all(
         relevantTasks.map(async (task) => {
             const processedTemplate = task.template 
@@ -202,7 +209,7 @@ export async function generateJiraTicketsAction(
                 iconUrl: task.iconUrl || '',
                 status: task.status,
                 projectIds: task.projectIds || [],
-                template: processedTemplate, // Use the processed template content
+                template: processedTemplate,
                 order: task.order || 0,
             };
         })
@@ -224,9 +231,14 @@ export async function generateJiraTicketsAction(
     };
   } catch (error: any) {
     console.error('Error in generateJiraTicketsAction:', error);
+    if (error.message.includes('permission')) {
+        if (debugInfo.projectsLoaded === 'pending') debugInfo.projectsLoaded = 'failed';
+        if (debugInfo.tasksLoaded === 'pending') debugInfo.tasksLoaded = 'failed';
+    }
+    const debugMessage = `DEBUG: ${JSON.stringify(debugInfo)}, Error: ${error.message}`;
     return {
       success: false,
-      message: `An error occurred while preparing the Jira tickets. Please try again. (Details: ${error.message})`,
+      message: `An error occurred while preparing the Jira tickets. Please try again. (Details: ${error.message}) DEBUG: ${debugMessage}`,
     };
   }
 }
