@@ -361,20 +361,16 @@ export async function createJiraTickets(
     
     const hasUsedAi = (storyDescription.includes('<AI') && aiContext.trim().length > 0) || tasks.some(t => t.template?.includes('<AI') && aiContext.trim().length > 0);
     
-    const historyPayload: any = {
-        userId: userId,
+    const historyData = {
         storyName: storySummary,
         jiraLink: `${url}/browse/${storyKey}`,
         tasks: tasks.map(t => t.name),
         aiUsed: hasUsedAi,
         aiCost: 0,
+        aiModel: hasUsedAi ? 'OpenAI' : undefined,
     };
 
-    if (hasUsedAi) {
-        historyPayload.aiModel = 'OpenAI';
-    }
-
-    await addGenerationHistory(historyPayload);
+    await addGenerationHistory(userId, historyData);
 
 
     return {
