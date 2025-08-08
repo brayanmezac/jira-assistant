@@ -158,9 +158,11 @@ export async function generateJiraTicketsAction(
         message: 'User not authenticated.',
     };
   }
+  
+  let allProjects, allTaskCodes;
 
   try {
-    const allProjects = await getProjectCodes();
+    allProjects = await getProjectCodes();
     const userProjects = allProjects.filter(p => p.userId === userId);
     
     const projectInfo = userProjects.find((p) => p.name === project);
@@ -179,7 +181,7 @@ export async function generateJiraTicketsAction(
 
     const projectKey = projectInfo.code;
     
-    const allTaskCodes = await getTaskCodes();
+    allTaskCodes = await getTaskCodes();
     const userTasks = allTaskCodes.filter(t => t.userId === userId);
 
     const relevantTasks = userTasks.filter(task => 
@@ -226,9 +228,10 @@ export async function generateJiraTicketsAction(
     };
   } catch (error: any) {
     console.error('Error in generateJiraTicketsAction:', error);
+    const debugInfo = `DEBUG INFO: UserId: ${userId}, Project: ${project}, Projects loaded: ${allProjects?.length ?? 'failed'}, Tasks loaded: ${allTaskCodes?.length ?? 'failed'}`;
     return {
       success: false,
-      message: `An error occurred while preparing the Jira tickets. Please try again. (Details: ${error.message})`,
+      message: `An error occurred while preparing the Jira tickets. Please try again. (Details: ${error.message}). ${debugInfo}`,
     };
   }
 }
@@ -298,12 +301,13 @@ export async function createJiraTickets(
 
   const hasUsedAi = (storyDescription.includes('<AI') && aiContext.trim().length > 0) || tasks.some(t => t.template?.includes('<AI') && aiContext.trim().length > 0);
     
-  let historyPayload: any = {
+  const historyPayload: any = {
       storyName: `${projectKey}_${storyNumber} - ${storyName}`,
       jiraLink: '', // Will be updated after story creation
       tasks: tasks.map(t => t.name),
       aiUsed: hasUsedAi,
       aiCost: 0,
+      userId: userId, // Ensure userId is in the payload
   };
 
   if (hasUsedAi) {
@@ -380,7 +384,7 @@ export async function createJiraTickets(
       data: { storyKey },
     };
   } catch (error: any) {
-    return {
+     return {
       success: false,
       message: `An unexpected error occurred: ${error.message}`,
     };
