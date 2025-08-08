@@ -301,10 +301,13 @@ export async function createJiraTickets(
       tasks: tasks.map(t => t.name),
       aiUsed: hasUsedAi,
       aiCost: 0,
+      userId: userId, // Ensure userId is in the payload
   };
 
   if (hasUsedAi) {
       historyPayload.aiModel = 'OpenAI';
+  } else {
+      delete historyPayload.aiModel;
   }
 
 
@@ -388,11 +391,9 @@ export async function createJiraTickets(
     console.error(
       '[JIRA DEBUG] An unexpected error occurred during ticket creation:', error
     );
-     // DEBUGGING: Enrich the error message
-    const debugMessage = `An unexpected error occurred: ${error.message} .. DEBUG INFO: ${error.toString()} UserID: ${userId} History Payload: ${JSON.stringify(historyPayload)}`;
     return {
       success: false,
-      message: debugMessage,
+      message: `An unexpected error occurred: ${error.message}`,
     };
   }
 }
