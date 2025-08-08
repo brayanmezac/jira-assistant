@@ -61,9 +61,9 @@ export async function ensureUserDocument(user: import('firebase/auth').User) {
 
 // Project Codes - User-specific
 export async function getProjectCodes(userId: string): Promise<ProjectCode[]> {
-    const snapshot = await getDocs(collection(db, 'projectCodes'));
-    const allProjects = snapshot.docs.map(doc => docToTyped<ProjectCode>(doc));
-    return allProjects.filter(p => p.userId === userId);
+    const q = query(collection(db, 'projectCodes'), where('userId', '==', userId));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => docToTyped<ProjectCode>(doc));
 }
 
 export async function getProjectCode(id: string): Promise<ProjectCode | null> {
@@ -94,12 +94,9 @@ export async function deleteProjectCode(id: string) {
 
 // Task Codes - User-specific
 export async function getTaskCodes(userId: string): Promise<TaskCode[]> {
-    const snapshot = await getDocs(collection(db, 'taskCodes'));
-    const allTasks = snapshot.docs.map(doc => docToTyped<TaskCode>(doc));
-    const userTasks = allTasks.filter(t => t.userId === userId);
-    // Sort in-memory to avoid needing a composite index
-    userTasks.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-    return userTasks;
+    const q = query(collection(db, 'taskCodes'), where('userId', '==', userId), orderBy('order'));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => docToTyped<TaskCode>(doc));
 }
 
 export async function getTaskCode(id: string): Promise<TaskCode | null> {

@@ -305,6 +305,8 @@ export async function createJiraTickets(
 
   if (hasUsedAi) {
       historyPayload.aiModel = 'OpenAI';
+  } else {
+      delete historyPayload.aiModel;
   }
 
   try {
