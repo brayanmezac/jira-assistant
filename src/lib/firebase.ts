@@ -128,12 +128,10 @@ export async function deleteTaskCode(id: string) {
 
 // Generation History - Global
 export async function addGenerationHistory(
-  userId: string,
-  historyPayload: Omit<GenerationHistoryEntry, 'id' | 'createdAt' | 'userId'>
+  historyPayload: Omit<GenerationHistoryEntry, 'id' | 'createdAt'>
 ) {
     const dataToSave = {
         ...historyPayload,
-        userId: userId, // Ensure userId is correctly set
         createdAt: Timestamp.now(),
     };
     await addDoc(collection(db, 'generationHistory'), dataToSave);

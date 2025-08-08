@@ -296,6 +296,7 @@ export async function createJiraTickets(
   const hasUsedAi = (storyDescription.includes('<AI') && aiContext.trim().length > 0) || tasks.some(t => t.template?.includes('<AI') && aiContext.trim().length > 0);
     
   const historyPayload = {
+      userId: userId, // CRITICAL FIX: Ensure userId is in the payload
       storyName: `${projectKey}_${storyNumber} - ${storyName}`,
       jiraLink: '', // Will be updated after story creation
       tasks: tasks.map(t => t.name),
@@ -373,7 +374,7 @@ export async function createJiraTickets(
       }
     }
     
-    await addGenerationHistory(userId, historyPayload);
+    await addGenerationHistory(historyPayload);
 
     return {
       success: true,
@@ -381,18 +382,12 @@ export async function createJiraTickets(
       data: { storyKey },
     };
   } catch (error: any) {
-    const debugMessage = `
-      Error: ${error.message}
-      UserID: ${userId}
-      History Payload: ${JSON.stringify(historyPayload, null, 2)}
-    `;
     console.error(
-      '[JIRA DEBUG] An unexpected error occurred during ticket creation:',
-      debugMessage
+      '[JIRA DEBUG] An unexpected error occurred during ticket creation:', error
     );
     return {
       success: false,
-      message: `An unexpected error occurred: ${error.message}. DEBUG INFO: ${debugMessage}`,
+      message: `An unexpected error occurred: ${error.message}`,
     };
   }
 }
