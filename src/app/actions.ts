@@ -301,11 +301,12 @@ export async function createJiraTickets(
       tasks: tasks.map(t => t.name),
       aiUsed: hasUsedAi,
       aiCost: 0,
-      userId: userId,
   };
 
   if (hasUsedAi) {
       historyPayload.aiModel = 'OpenAI';
+  } else {
+      delete historyPayload.aiModel;
   }
 
 

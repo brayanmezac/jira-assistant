@@ -1,6 +1,6 @@
 
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore, collection, getDocs, doc, addDoc, updateDoc, deleteDoc, type DocumentData, type WithFieldValue, setDoc, getDoc, query, where, orderBy, writeBatch, Timestamp } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, doc, addDoc, updateDoc, deleteDoc, type DocumentData, type WithFieldValue, setDoc, getDoc, query, where, orderBy, writeBatch, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import type { ProjectCode, TaskCode, JiraSettings, GenerationHistoryEntry } from './types';
 
@@ -61,9 +61,9 @@ export async function ensureUserDocument(user: import('firebase/auth').User) {
 
 // Project Codes - User-specific
 export async function getProjectCodes(userId: string): Promise<ProjectCode[]> {
-    const q = query(collection(db, 'projectCodes'), where('userId', '==', userId));
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => docToTyped<ProjectCode>(doc));
+    const snapshot = await getDocs(collection(db, 'projectCodes'));
+    const allProjects = snapshot.docs.map(doc => docToTyped<ProjectCode>(doc));
+    return allProjects.filter(p => p.userId === userId);
 }
 
 export async function getProjectCode(id: string): Promise<ProjectCode | null> {
@@ -94,12 +94,12 @@ export async function deleteProjectCode(id: string) {
 
 // Task Codes - User-specific
 export async function getTaskCodes(userId: string): Promise<TaskCode[]> {
-    const q = query(collection(db, 'taskCodes'), where('userId', '==', userId));
-    const snapshot = await getDocs(q);
-    const tasks = snapshot.docs.map(doc => docToTyped<TaskCode>(doc));
+    const snapshot = await getDocs(collection(db, 'taskCodes'));
+    const allTasks = snapshot.docs.map(doc => docToTyped<TaskCode>(doc));
+    const userTasks = allTasks.filter(t => t.userId === userId);
     // Sort in-memory to avoid needing a composite index
-    tasks.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-    return tasks;
+    userTasks.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    return userTasks;
 }
 
 export async function getTaskCode(id: string): Promise<TaskCode | null> {
@@ -159,17 +159,18 @@ export async function addGenerationHistory(
 }
 
 export async function getGenerationHistory(userId?: string): Promise<GenerationHistoryEntry[]> {
+    // If we need to show only user-specific history later, we can re-add the userId filter.
+    // For now, fetch all.
     const historyRef = collection(db, 'generationHistory');
-    let q;
-
-    if (userId) {
-        // Query for a specific user's history
-        q = query(historyRef, where('userId', '==', userId), orderBy('createdAt', 'desc'));
-    } else {
-        // Query for all history
-        q = query(historyRef, orderBy('createdAt', 'desc'));
-    }
+    const q = query(historyRef, orderBy('createdAt', 'desc'));
 
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => docToTyped<GenerationHistoryEntry>(doc));
+    const allHistory = snapshot.docs.map(doc => docToTyped<GenerationHistoryEntry>(doc));
+    
+    // If a userId is provided, filter in code.
+    if (userId) {
+        return allHistory.filter(h => h.userId === userId);
+    }
+    
+    return allHistory;
 }
