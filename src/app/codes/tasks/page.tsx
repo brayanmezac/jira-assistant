@@ -43,16 +43,19 @@ export default function TaskCodesPage() {
     if (!user) return;
     async function loadData() {
       try {
-        const [taskData, projectData] = await Promise.all([
-            getTaskCodes(user!.uid),
-            getProjectCodes(user!.uid)
+        const [allTasks, allProjects] = await Promise.all([
+            getTaskCodes(),
+            getProjectCodes()
         ]);
         
-        taskData.sort((a, b) => a.name.localeCompare(b.name));
-        projectData.sort((a, b) => a.name.localeCompare(b.name));
+        const userTasks = allTasks.filter(t => t.userId === user!.uid);
+        const userProjects = allProjects.filter(p => p.userId === user!.uid);
 
-        setTasks(taskData);
-        setProjects(projectData);
+        userTasks.sort((a, b) => a.name.localeCompare(b.name));
+        userProjects.sort((a, b) => a.name.localeCompare(b.name));
+
+        setTasks(userTasks);
+        setProjects(userProjects);
 
       } catch (error) {
         console.error("Failed to load task and project codes:", error);

@@ -9,7 +9,7 @@ import {
   jiraIssueTypeSchema,
   type TaskCode,
 } from '@/lib/types';
-import { getTaskCodes, getProjectCodes, getProjectCode, addGenerationHistory } from '@/lib/firebase';
+import { getTaskCodesForUser, getProjectCodesForUser, getProjectCode, addGenerationHistory } from '@/lib/firebase';
 import { auth } from '@/lib/firebase';
 
 export type FormState = {
@@ -160,7 +160,7 @@ export async function generateJiraTicketsAction(
   }
 
   try {
-    const projects = await getProjectCodes(userId);
+    const projects = await getProjectCodesForUser(userId);
     const projectInfo = projects.find((p) => p.name === project);
 
     if (!projectInfo || !projectInfo.id) {
@@ -177,7 +177,7 @@ export async function generateJiraTicketsAction(
 
     const projectKey = projectInfo.code;
     
-    const allTaskCodes = await getTaskCodes(userId);
+    const allTaskCodes = await getTaskCodesForUser(userId);
 
     const relevantTasks = allTaskCodes.filter(task => 
       selectedTasks.includes(task.id) &&
@@ -305,8 +305,6 @@ export async function createJiraTickets(
 
   if (hasUsedAi) {
       historyPayload.aiModel = 'OpenAI';
-  } else {
-      delete historyPayload.aiModel;
   }
 
   try {
@@ -344,7 +342,6 @@ export async function createJiraTickets(
     const storyData = await storyResponse.json();
     const storyKey = storyData.key;
     
-    // Update jiraLink in history payload
     historyPayload.jiraLink = `${url}/browse/${storyKey}`;
     
     await addGenerationHistory(userId, historyPayload);

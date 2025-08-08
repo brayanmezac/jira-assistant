@@ -209,14 +209,18 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
  useEffect(() => {
       if (!user) return;
       const fetchProjectsAndTasks = async () => {
-          const [projectList, taskList] = await Promise.all([
-              getProjectCodes(user.uid),
-              getTaskCodes(user.uid)
+          const [allProjectList, allTaskList] = await Promise.all([
+              getProjectCodes(),
+              getTaskCodes()
           ]);
-          projectList.sort((a,b) => a.name.localeCompare(b.name));
-          // tasks are already sorted by order from firebase
-          setProjects(projectList);
-          setAllTasks(taskList);
+
+          const userProjects = allProjectList.filter(p => p.userId === user.uid);
+          userProjects.sort((a,b) => a.name.localeCompare(b.name));
+
+          const userTasks = allTaskList.filter(t => t.userId === user.uid);
+          
+          setProjects(userProjects);
+          setAllTasks(userTasks);
       };
       fetchProjectsAndTasks();
   }, [user]);

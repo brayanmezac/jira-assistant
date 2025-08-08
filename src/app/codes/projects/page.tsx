@@ -41,9 +41,11 @@ export default function ProjectCodesPage() {
     if (!user) return;
     async function loadData() {
       try {
-        const projectData = await getProjectCodes(user.uid);
-        projectData.sort((a, b) => a.name.localeCompare(b.name));
-        setProjects(projectData);
+        // Read all and filter on client
+        const allProjects = await getProjectCodes();
+        const userProjects = allProjects.filter(p => p.userId === user!.uid);
+        userProjects.sort((a, b) => a.name.localeCompare(b.name));
+        setProjects(userProjects);
       } catch (error) {
         console.error("Failed to load project codes:", error);
       } finally {

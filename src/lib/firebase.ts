@@ -59,8 +59,14 @@ export async function ensureUserDocument(user: import('firebase/auth').User) {
 }
 
 
-// Project Codes - User-specific
-export async function getProjectCodes(userId: string): Promise<ProjectCode[]> {
+// Project Codes - CLIENT-SIDE (reads entire collection)
+export async function getProjectCodes(): Promise<ProjectCode[]> {
+    const snapshot = await getDocs(collection(db, 'projectCodes'));
+    return snapshot.docs.map(doc => docToTyped<ProjectCode>(doc));
+}
+
+// Project Codes - SERVER-SIDE (reads only for a specific user)
+export async function getProjectCodesForUser(userId: string): Promise<ProjectCode[]> {
     const q = query(collection(db, 'projectCodes'), where('userId', '==', userId));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => docToTyped<ProjectCode>(doc));
@@ -92,12 +98,19 @@ export async function deleteProjectCode(id: string) {
     await deleteDoc(docRef);
 }
 
-// Task Codes - User-specific
-export async function getTaskCodes(userId: string): Promise<TaskCode[]> {
+// Task Codes - CLIENT-SIDE (reads entire collection)
+export async function getTaskCodes(): Promise<TaskCode[]> {
+    const snapshot = await getDocs(query(collection(db, 'taskCodes'), orderBy('order')));
+    return snapshot.docs.map(doc => docToTyped<TaskCode>(doc));
+}
+
+// Task Codes - SERVER-SIDE (reads only for a specific user)
+export async function getTaskCodesForUser(userId: string): Promise<TaskCode[]> {
     const q = query(collection(db, 'taskCodes'), where('userId', '==', userId), orderBy('order'));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => docToTyped<TaskCode>(doc));
 }
+
 
 export async function getTaskCode(id: string): Promise<TaskCode | null> {
     const docRef = doc(db, 'taskCodes', id);
@@ -112,7 +125,7 @@ export async function addTaskCode(taskData: WithFieldValue<Omit<TaskCode, 'id'>>
     const collectionRef = collection(db, 'taskCodes');
     
     // Get all tasks for the user to calculate the next order number, avoiding a complex query.
-    const tasks = await getTaskCodes(taskData.userId);
+    const tasks = await getTaskCodesForUser(taskData.userId);
     const lastOrder = tasks.length > 0 ? Math.max(...tasks.map(t => t.order || 0)) : -1;
     
     const dataWithOrder = { ...taskData, order: lastOrder + 1 };
