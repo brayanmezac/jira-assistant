@@ -1,6 +1,6 @@
 
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore, collection, getDocs, doc, addDoc, updateDoc, deleteDoc, type DocumentData, type WithFieldValue, setDoc, getDoc, query, where, orderBy, writeBatch, Timestamp, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, doc, addDoc, updateDoc, deleteDoc, type DocumentData, type WithFieldValue, setDoc, getDoc, query, where, orderBy, writeBatch, Timestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import type { ProjectCode, TaskCode, JiraSettings, GenerationHistoryEntry } from './types';
 
@@ -45,14 +45,14 @@ export async function ensureUserDocument(user: import('firebase/auth').User) {
     const userDoc = await getDoc(userDocRef);
 
     if (userDoc.exists()) {
-        await setDoc(userDocRef, { lastLoginAt: serverTimestamp() }, { merge: true });
+        await updateDoc(userDocRef, { lastLoginAt: Timestamp.now() });
     } else {
         const userData = {
             email: user.email,
             displayName: user.displayName || user.email?.split('@')[0] || 'New User',
             photoURL: user.photoURL,
-            createdAt: serverTimestamp(),
-            lastLoginAt: serverTimestamp(),
+            createdAt: Timestamp.now(),
+            lastLoginAt: Timestamp.now(),
         };
         await setDoc(userDocRef, userData);
     }
@@ -158,10 +158,10 @@ export async function deleteTaskCode(id: string) {
 // Generation History - Global
 export async function addGenerationHistory(
   userId: string,
-  historyPayload: Omit<GenerationHistoryEntry, 'id' | 'createdAt' | 'userId'>
+  historyData: Omit<GenerationHistoryEntry, 'id' | 'createdAt' | 'userId'>
 ) {
     const dataToSave = {
-        ...historyPayload,
+        ...historyData,
         userId: userId, // Explicitly add the userId
         createdAt: Timestamp.now(),
     };
@@ -169,18 +169,15 @@ export async function addGenerationHistory(
 }
 
 export async function getGenerationHistory(userId?: string): Promise<GenerationHistoryEntry[]> {
-    // If we need to show only user-specific history later, we can re-add the userId filter.
-    // For now, fetch all.
+    let q;
     const historyRef = collection(db, 'generationHistory');
-    const q = query(historyRef, orderBy('createdAt', 'desc'));
+    
+    if (userId) {
+        q = query(historyRef, where('userId', '==', userId), orderBy('createdAt', 'desc'));
+    } else {
+        q = query(historyRef, orderBy('createdAt', 'desc'));
+    }
 
     const snapshot = await getDocs(q);
-    const allHistory = snapshot.docs.map(doc => docToTyped<GenerationHistoryEntry>(doc));
-    
-    // If a userId is provided, filter in code.
-    if (userId) {
-        return allHistory.filter(h => h.userId === userId);
-    }
-    
-    return allHistory;
+    return snapshot.docs.map(doc => docToTyped<GenerationHistoryEntry>(doc));
 }
