@@ -2,26 +2,6 @@
 import { z } from 'zod';
 import { Timestamp } from 'firebase/firestore';
 
-export const jiraStoryFormSchema = z.object({
-  name: z.string().min(3, { message: 'Story name must be at least 3 characters.' }),
-  description: z.string().nullish().default(''), // AI context can be null and will default to empty string
-  number: z.coerce.number({required_error: "Story number is required."}).int().positive({ message: 'Story number must be a positive number.' }),
-  project: z.string().nonempty({ message: 'Please select a project.' }),
-  userId: z.string().nonempty({ message: 'User ID is required.' }),
-  selectedTasks: z.array(z.string()).optional().default([]),
-});
-
-export const jiraSettingsSchema = z.object({
-  url: z.string().url({ message: 'Please enter a valid URL.' }).or(z.literal('')).default(''),
-  email: z.string().email({ message: 'Please enter a valid email.' }).or(z.literal('')).default(''),
-  token: z.string().optional().default(''),
-  epicIssueTypeId: z.string().optional().default(''),
-  storyIssueTypeId: z.string().optional().default(''),
-  language: z.string().default('en'),
-  theme: z.string().default('system'),
-});
-export type JiraSettings = z.infer<typeof jiraSettingsSchema>;
-
 export const projectCodeSchema = z.object({
   userId: z.string(),
   code: z.string().min(1, { message: 'Code is required.'}),
@@ -43,6 +23,27 @@ export const taskCodeSchema = z.object({
   order: z.number().default(0),
 });
 export type TaskCode = z.infer<typeof taskCodeSchema> & { id: string };
+
+
+export const jiraStoryFormSchema = z.object({
+  name: z.string().min(3, { message: 'Story name must be at least 3 characters.' }),
+  description: z.string().nullish().default(''), // AI context can be null and will default to empty string
+  number: z.coerce.number({required_error: "Story number is required."}).int().positive({ message: 'Story number must be a positive number.' }),
+  project: projectCodeSchema.and(z.object({id: z.string()})), // Expect the full object now
+  userId: z.string().nonempty({ message: 'User ID is required.' }),
+  selectedTasks: z.array(taskCodeSchema.and(z.object({id: z.string()}))).optional().default([]), // Expect array of full objects
+});
+
+export const jiraSettingsSchema = z.object({
+  url: z.string().url({ message: 'Please enter a valid URL.' }).or(z.literal('')).default(''),
+  email: z.string().email({ message: 'Please enter a valid email.' }).or(z.literal('')).default(''),
+  token: z.string().optional().default(''),
+  epicIssueTypeId: z.string().optional().default(''),
+  storyIssueTypeId: z.string().optional().default(''),
+  language: z.string().default('en'),
+  theme: z.string().default('system'),
+});
+export type JiraSettings = z.infer<typeof jiraSettingsSchema>;
 
 export const jiraIssueTypeSchema = z.object({
     id: z.string(),

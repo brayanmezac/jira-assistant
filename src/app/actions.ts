@@ -8,8 +8,9 @@ import {
   jiraSettingsSchema,
   jiraIssueTypeSchema,
   type TaskCode,
+  type ProjectCode,
 } from '@/lib/types';
-import { getTaskCodesForUser, getProjectCodesForUser, getProjectCode, addGenerationHistory } from '@/lib/firebase';
+import { addGenerationHistory } from '@/lib/firebase';
 import { auth } from '@/lib/firebase';
 
 export type FormState = {
@@ -132,13 +133,19 @@ export async function generateJiraTicketsAction(
   _prevState: FormState,
   formData: FormData
 ): Promise<FormState> {
-  const validatedFields = jiraStoryFormSchema.safeParse({
+  const data = {
     name: formData.get('name'),
     description: formData.get('description'),
     number: Number(formData.get('number')),
-    project: formData.get('project'),
+    project: formData.get('project'), // This is now a JSON string of ProjectCode
     userId: formData.get('userId'),
-    selectedTasks: formData.getAll('selectedTasks'),
+    selectedTasks: formData.getAll('selectedTasks'), // These are now JSON strings of TaskCode
+  };
+
+  const validatedFields = jiraStoryFormSchema.safeParse({
+    ...data,
+    project: data.project ? JSON.parse(data.project as string) : null,
+    selectedTasks: data.selectedTasks.map(t => JSON.parse(t as string)),
   });
 
   if (!validatedFields.success) {
@@ -148,7 +155,7 @@ export async function generateJiraTicketsAction(
       message: `Invalid form data: ${errorMessages}. Please check your inputs.`,
     };
   }
-  
+
   const { name, description, project, number, userId, selectedTasks } = validatedFields.data;
   const aiContext = description || '';
 
@@ -158,59 +165,25 @@ export async function generateJiraTicketsAction(
         message: 'User not authenticated.',
     };
   }
-  
-  let debugInfo = {
-      userId,
-      project,
-      projectsLoaded: 'pending',
-      tasksLoaded: 'pending',
-  };
 
   try {
-    const userProjects = await getProjectCodesForUser(userId);
-    debugInfo.projectsLoaded = `ok (${userProjects.length})`;
-
-    const projectInfo = userProjects.find((p) => p.name === project);
-
-    if (!projectInfo || !projectInfo.id) {
-      return {
-        success: false,
-        message: `Could not find a valid project for "${project}".`,
-      };
-    }
-    
-    const fullProject = await getProjectCode(projectInfo.id);
-    const template = fullProject?.template || aiContext; 
-    
+    const projectInfo = project as ProjectCode;
+    const template = projectInfo?.template || aiContext;
     const finalDescription = await processTemplateWithAI(template, aiContext);
 
     const projectKey = projectInfo.code;
     
-    const userTasks = await getTaskCodesForUser(userId);
-    debugInfo.tasksLoaded = `ok (${userTasks.length})`;
-
-    const relevantTasks = userTasks.filter(task => 
-      selectedTasks.includes(task.id) &&
-      (!task.projectIds || task.projectIds.length === 0 || task.projectIds.includes(projectInfo.id))
-    );
+    const relevantTasks = selectedTasks as TaskCode[];
 
     const sanitizedTasks: TaskCode[] = await Promise.all(
         relevantTasks.map(async (task) => {
-            const processedTemplate = task.template 
-                ? await processTemplateWithAI(task.template, aiContext) 
+            const processedTemplate = task.template
+                ? await processTemplateWithAI(task.template, aiContext)
                 : '';
-            
+
             return {
-                id: task.id,
-                userId: task.userId,
-                code: task.code,
-                name: task.name,
-                type: task.type,
-                iconUrl: task.iconUrl || '',
-                status: task.status,
-                projectIds: task.projectIds || [],
+                ...task,
                 template: processedTemplate,
-                order: task.order || 0,
             };
         })
     );
@@ -220,7 +193,7 @@ export async function generateJiraTicketsAction(
       success: true,
       message: 'Content ready for Jira.',
       data: {
-        storyDescription: finalDescription, 
+        storyDescription: finalDescription,
         storyName: name,
         projectKey: projectKey,
         storyNumber: number,
@@ -231,14 +204,9 @@ export async function generateJiraTicketsAction(
     };
   } catch (error: any) {
     console.error('Error in generateJiraTicketsAction:', error);
-    if (error.message.includes('permission')) {
-        if (debugInfo.projectsLoaded === 'pending') debugInfo.projectsLoaded = 'failed';
-        if (debugInfo.tasksLoaded === 'pending') debugInfo.tasksLoaded = 'failed';
-    }
-    const debugMessage = `DEBUG: ${JSON.stringify(debugInfo)}, Error: ${error.message}`;
     return {
       success: false,
-      message: `An error occurred while preparing the Jira tickets. Please try again. (Details: ${error.message}) DEBUG: ${debugMessage}`,
+      message: `An error occurred while preparing the Jira tickets. Please try again. (Details: ${error.message})`,
     };
   }
 }
@@ -278,7 +246,7 @@ export async function createJiraTickets(
     userId,
   } = payload;
   const { url, email, token, storyIssueTypeId } = settings;
-  
+
   if (!userId) {
      return {
       success: false,
@@ -307,18 +275,15 @@ export async function createJiraTickets(
   };
 
   const hasUsedAi = (storyDescription.includes('<AI') && aiContext.trim().length > 0) || tasks.some(t => t.template?.includes('<AI') && aiContext.trim().length > 0);
-    
-  const historyData: any = {
+
+  const historyPayload = {
       storyName: `${projectKey}_${storyNumber} - ${storyName}`,
       jiraLink: '', // Will be updated after story creation
       tasks: tasks.map(t => t.name),
       aiUsed: hasUsedAi,
       aiCost: 0,
+      ...(hasUsedAi && { aiModel: 'OpenAI' }),
   };
-
-  if (hasUsedAi) {
-      historyData.aiModel = 'OpenAI';
-  }
 
   try {
     const storySummary = `${projectKey}_${storyNumber} - ${storyName}`;
@@ -355,13 +320,17 @@ export async function createJiraTickets(
     const storyData = await storyResponse.json();
     const storyKey = storyData.key;
     
-    historyData.jiraLink = `${url}/browse/${storyKey}`;
+    // Update payload with the real link before saving
+    const fullHistoryPayload = {
+        ...historyPayload,
+        jiraLink: `${url}/browse/${storyKey}`,
+    };
     
-    await addGenerationHistory(userId, historyData);
+    await addGenerationHistory(userId, fullHistoryPayload);
 
     for (const subtask of tasks) {
       const subtaskSummary = `${projectKey}_${storyNumber}_${subtask.type} ${subtask.name}`;
-      
+
       const subtaskPayload = {
         fields: {
           project: { key: projectKey },

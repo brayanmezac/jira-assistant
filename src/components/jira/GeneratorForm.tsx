@@ -157,11 +157,11 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
   const form = useFormContext<z.infer<typeof jiraStoryFormSchema>>();
   const { control, watch, setValue, register } = form;
   const selectedProject = watch('project');
-  const selectedTaskIds = watch('selectedTasks') || [];
+  const selectedTasks = watch('selectedTasks') || [];
 
   const availableTasks = useMemo(() => {
       if (!selectedProject || !projects.length) return [];
-      const projectInfo = projects.find(p => p.name === selectedProject);
+      const projectInfo = projects.find(p => p.id === selectedProject.id);
       if (!projectInfo) return [];
 
       return allTasks.filter(task => {
@@ -171,18 +171,24 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
       });
   }, [selectedProject, allTasks, projects]);
 
+  const selectedTaskObjects = useMemo(() => {
+    return availableTasks.filter(task => selectedTasks.some(st => st.id === task.id));
+  }, [availableTasks, selectedTasks]);
+
   useEffect(() => {
-    const activeTaskIds = availableTasks.filter(t => t.status === 'active').map(t => t.id);
-    const optionalSelectedTaskIds = availableTasks
-        .filter(t => t.status === 'optional' && selectedTaskIds.includes(t.id))
-        .map(t => t.id);
+    const activeTasks = availableTasks.filter(t => t.status === 'active');
+    const optionalSelectedTasks = availableTasks
+        .filter(t => t.status === 'optional' && selectedTasks.some(st => st.id === t.id));
 
-    const newSelectedTasks = [...new Set([...activeTaskIds, ...optionalSelectedTaskIds])];
+    const newSelectedTasks = [...new Set([...activeTasks, ...optionalSelectedTasks])];
+    
+    const newIds = newSelectedTasks.map(t => t.id);
+    const currentIds = selectedTasks.map(t => t.id);
 
-    if (JSON.stringify(newSelectedTasks.sort()) !== JSON.stringify(selectedTaskIds.sort())) {
+    if (JSON.stringify(newIds.sort()) !== JSON.stringify(currentIds.sort())) {
         setValue('selectedTasks', newSelectedTasks, { shouldValidate: true, shouldDirty: true });
     }
-}, [availableTasks, selectedTaskIds, setValue]);
+}, [availableTasks, selectedTasks, setValue]);
 
 
   const tasksToDisplay = useMemo(() => {
@@ -190,7 +196,7 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
     
     return allTasks
         .filter(task => {
-            const projectInfo = projects.find(p => p.name === selectedProject);
+            const projectInfo = projects.find(p => p.id === selectedProject.id);
             if (!projectInfo) return false;
 
             const isRelevant = !task.projectIds || task.projectIds.length === 0 || task.projectIds.includes(projectInfo.id);
@@ -201,10 +207,10 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
         .map(task => ({
             id: task.id,
             type: task.type,
-            display: selectedTaskIds.includes(task.id) ? 'normal' : 'strike',
+            display: selectedTasks.some(st => st.id === task.id) ? 'normal' : 'strike',
         }));
 
-  }, [allTasks, selectedProject, selectedTaskIds, projects]);
+  }, [allTasks, selectedProject, selectedTasks, projects]);
 
  useEffect(() => {
       if (!user) return;
@@ -229,7 +235,9 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
     <Form {...form}>
       <form action={formAction} className="space-y-6">
         <input type="hidden" {...register('userId')} value={user?.uid || ''} />
-        {selectedTaskIds.map(id => <input key={id} type="hidden" name="selectedTasks" value={id} />)}
+        {/* Pass selected objects as JSON strings */}
+        {selectedProject && <input type="hidden" name="project" value={JSON.stringify(selectedProject)} />}
+        {selectedTaskObjects.map(task => <input key={task.id} type="hidden" name="selectedTasks" value={JSON.stringify(task)} />)}
         
         <Card>
           <CardHeader>
@@ -246,10 +254,11 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
                     <FormLabel>{t.projectLabel}</FormLabel>
                     <Select
                         onValueChange={(value) => {
-                            field.onChange(value);
+                            const projectObject = projects.find(p => p.id === value);
+                            field.onChange(projectObject);
                         }}
-                        defaultValue={field.value}
-                        name={field.name}
+                        value={field.value?.id}
+                        name="project_selector" // Use a different name to avoid conflict
                     >
                         <FormControl>
                         <SelectTrigger>
@@ -258,7 +267,7 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
                         </FormControl>
                         <SelectContent>
                         {projects.map(project => (
-                            <SelectItem key={project.id} value={project.name}>
+                            <SelectItem key={project.id} value={project.id}>
                                 {project.name}
                             </SelectItem>
                         ))}
@@ -311,8 +320,11 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
                             <FormLabel>{t.tasksLabel}</FormLabel>
                             <TasksMultiSelect 
                                 availableTasks={availableTasks}
-                                selectedTaskIds={field.value || []}
-                                onSelectionChange={(ids) => field.onChange(ids)}
+                                selectedTaskIds={field.value?.map(t => t.id) || []}
+                                onSelectionChange={(ids) => {
+                                    const taskObjects = allTasks.filter(t => ids.includes(t.id));
+                                    field.onChange(taskObjects);
+                                }}
                                 lang={settings.language as 'en' | 'es' || 'en'}
                             />
                             <FormMessage />
