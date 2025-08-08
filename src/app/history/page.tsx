@@ -59,7 +59,10 @@ export default function HistoryPage() {
 
   useEffect(() => {
     // Only load history if a user is logged in
-    if (!user) return;
+    if (!user) {
+        setLoading(false);
+        return;
+    };
     
     async function loadData() {
       try {

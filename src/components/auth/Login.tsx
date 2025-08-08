@@ -41,15 +41,20 @@ export function Login() {
     const userDocRef = doc(db, 'users', user.uid);
     const userDoc = await getDoc(userDocRef);
 
-    const userData = {
-      email: user.email,
-      displayName: user.displayName || user.email?.split('@')[0] || 'New User',
-      photoURL: user.photoURL,
-      lastLoginAt: serverTimestamp(),
-      ...(userDoc.exists() ? {} : { createdAt: serverTimestamp() }), // Add createdAt only if doc doesn't exist
-    };
-    
-    await setDoc(userDocRef, userData, { merge: true });
+    if (userDoc.exists()) {
+        // If user exists, just update last login
+        await setDoc(userDocRef, { lastLoginAt: serverTimestamp() }, { merge: true });
+    } else {
+        // If user doesn't exist, create the document
+        const userData = {
+            email: user.email,
+            displayName: user.displayName || user.email?.split('@')[0] || 'New User',
+            photoURL: user.photoURL,
+            createdAt: serverTimestamp(),
+            lastLoginAt: serverTimestamp(),
+        };
+        await setDoc(userDocRef, userData);
+    }
   }
 
   useEffect(() => {

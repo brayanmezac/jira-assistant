@@ -129,30 +129,21 @@ export async function deleteTaskCode(id: string) {
 // Generation History - Global
 export async function addGenerationHistory(
   userId: string,
-  historyData: Omit<GenerationHistoryEntry, 'id' | 'createdAt' | 'userId'>
+  historyPayload: Omit<GenerationHistoryEntry, 'id' | 'createdAt' | 'userId'>
 ) {
     const dataToSave = {
-        ...historyData,
+        ...historyPayload,
         userId: userId, // Ensure userId is correctly set
         createdAt: Timestamp.now(),
     };
     await addDoc(collection(db, 'generationHistory'), dataToSave);
 }
 
-export async function getGenerationHistory(userId?: string): Promise<GenerationHistoryEntry[]> {
-    let q;
-    if (userId) {
-        q = query(
-            collection(db, 'generationHistory'),
-            where('userId', '==', userId),
-            orderBy('createdAt', 'desc')
-        );
-    } else {
-        q = query(
-            collection(db, 'generationHistory'),
-            orderBy('createdAt', 'desc')
-        );
-    }
+export async function getGenerationHistory(): Promise<GenerationHistoryEntry[]> {
+    const q = query(
+        collection(db, 'generationHistory'),
+        orderBy('createdAt', 'desc')
+    );
 
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => docToTyped<GenerationHistoryEntry>(doc));
