@@ -367,7 +367,7 @@ export async function createJiraTickets(
         tasks: tasks.map(t => t.name),
         aiUsed: hasUsedAi,
         aiCost: 0,
-        aiModel: hasUsedAi ? 'OpenAI' : undefined,
+        ...(hasUsedAi && { aiModel: 'OpenAI' }),
     };
 
     await addGenerationHistory(userId, historyData);
