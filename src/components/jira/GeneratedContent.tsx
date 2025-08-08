@@ -191,6 +191,7 @@ export function GeneratedContent({ storyDescription, storyName, projectKey, stor
             // Write to history on success
             const hasUsedAi = (storyDescription.includes('<AI') && aiContext.trim().length > 0) || tasks.some(t => t.template?.includes('<AI') && aiContext.trim().length > 0);
             const historyPayload = {
+              userId: userId, // Ensure userId is in the payload
               storyName: `${projectKey}_${storyNumber} - ${storyName}`,
               jiraLink: storyUrl,
               tasks: tasks.map(t => t.name),
@@ -199,7 +200,7 @@ export function GeneratedContent({ storyDescription, storyName, projectKey, stor
               ...(hasUsedAi && { aiModel: 'OpenAI' }),
             };
             
-            await addGenerationHistory(userId, historyPayload);
+            await addGenerationHistory(historyPayload);
 
             toast({
               title: t.successTitle,
@@ -227,10 +228,11 @@ export function GeneratedContent({ storyDescription, storyName, projectKey, stor
         }
     } catch (error) {
         console.error("Error in handleCreateInJira:", error);
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
         toast({
             variant: 'destructive',
             title: t.clientErrorTitle,
-            description: t.clientErrorDescription,
+            description: errorMessage,
         });
     } finally {
         setIsCreating(false);
