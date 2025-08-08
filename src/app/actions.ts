@@ -305,10 +305,7 @@ export async function createJiraTickets(
 
   if (hasUsedAi) {
       historyPayload.aiModel = 'OpenAI';
-  } else {
-      delete historyPayload.aiModel;
   }
-
 
   try {
     const storySummary = `${projectKey}_${storyNumber} - ${storyName}`;
@@ -336,11 +333,6 @@ export async function createJiraTickets(
         };
       }
       const errorData = await storyResponse.text();
-      console.error('[JIRA DEBUG] Failed to create Story:', {
-        status: storyResponse.status,
-        statusText: storyResponse.statusText,
-        data: errorData,
-      });
       return {
         success: false,
         message: `Failed to create Story: ${storyResponse.statusText}. ${errorData}`,
@@ -349,7 +341,6 @@ export async function createJiraTickets(
 
     const storyData = await storyResponse.json();
     const storyKey = storyData.key;
-    console.log('[JIRA DEBUG] Story created successfully:', storyData);
     
     // Update jiraLink in history payload
     historyPayload.jiraLink = `${url}/browse/${storyKey}`;
@@ -387,9 +378,6 @@ export async function createJiraTickets(
       data: { storyKey },
     };
   } catch (error: any) {
-    console.error(
-      '[JIRA DEBUG] An unexpected error occurred during ticket creation:', error
-    );
     return {
       success: false,
       message: `An unexpected error occurred: ${error.message}`,

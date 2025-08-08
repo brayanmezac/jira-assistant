@@ -4,31 +4,31 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Users can create and manage their own profile document.
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
     // User-specific settings, only the user can read/write their own document.
     match /userSettings/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Project codes are public to read, but only authenticated users can modify them.
+    // Project codes can be read by any authenticated user and written by their owner.
     match /projectCodes/{docId} {
-      allow read;
-      allow write: if request.auth != null;
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == request.resource.data.userId;
     }
 
-    // Task codes are public to read, but only authenticated users can modify them.
+    // Task codes can be read by any authenticated user and written by their owner.
     match /taskCodes/{docId} {
-      allow read;
-      allow write: if request.auth != null;
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == request.resource.data.userId;
     }
 
-    // Generation history can only be read/written by the user who owns the data.
+    // Generation history can be written and read only by the user who owns it.
     match /generationHistory/{docId} {
       allow read, write: if request.auth != null && request.auth.uid == request.resource.data.userId;
-    }
-    
-    // Default deny all other collections
-    match /{document=**} {
-      allow read, write: if false;
     }
   }
 }
