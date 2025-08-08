@@ -293,6 +293,17 @@ export async function createJiraTickets(
     Accept: 'application/json',
   };
 
+  const hasUsedAi = (storyDescription.includes('<AI') && aiContext.trim().length > 0) || tasks.some(t => t.template?.includes('<AI') && aiContext.trim().length > 0);
+    
+  const historyPayload = {
+      storyName: `${projectKey}_${storyNumber} - ${storyName}`,
+      jiraLink: '', // Will be updated after story creation
+      tasks: tasks.map(t => t.name),
+      aiUsed: hasUsedAi,
+      aiCost: 0,
+      ...(hasUsedAi && { aiModel: 'OpenAI' }),
+  };
+
   try {
     const storySummary = `${projectKey}_${storyNumber} - ${storyName}`;
 
@@ -334,6 +345,9 @@ export async function createJiraTickets(
     const storyKey = storyData.key;
     console.log('[JIRA DEBUG] Story created successfully:', storyData);
     
+    // Update jiraLink in history payload
+    historyPayload.jiraLink = `${url}/browse/${storyKey}`;
+    
     for (const subtask of tasks) {
       const subtaskSummary = `${projectKey}_${storyNumber}_${subtask.type} ${subtask.name}`;
       
@@ -359,19 +373,7 @@ export async function createJiraTickets(
       }
     }
     
-    const hasUsedAi = (storyDescription.includes('<AI') && aiContext.trim().length > 0) || tasks.some(t => t.template?.includes('<AI') && aiContext.trim().length > 0);
-    
-    const historyPayload = {
-        storyName: storySummary,
-        jiraLink: `${url}/browse/${storyKey}`,
-        tasks: tasks.map(t => t.name),
-        aiUsed: hasUsedAi,
-        aiCost: 0,
-        ...(hasUsedAi && { aiModel: 'OpenAI' }),
-    };
-
     await addGenerationHistory(userId, historyPayload);
-
 
     return {
       success: true,
@@ -379,13 +381,18 @@ export async function createJiraTickets(
       data: { storyKey },
     };
   } catch (error: any) {
+    const debugMessage = `
+      Error: ${error.message}
+      UserID: ${userId}
+      History Payload: ${JSON.stringify(historyPayload, null, 2)}
+    `;
     console.error(
       '[JIRA DEBUG] An unexpected error occurred during ticket creation:',
-      error
+      debugMessage
     );
     return {
       success: false,
-      message: `An unexpected error occurred: ${error.message}`,
+      message: `An unexpected error occurred: ${error.message}. DEBUG INFO: ${debugMessage}`,
     };
   }
 }
