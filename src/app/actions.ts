@@ -9,7 +9,7 @@ import {
   jiraIssueTypeSchema,
   type TaskCode,
 } from '@/lib/types';
-import { getTaskCodesForUser, getProjectCodesForUser, getProjectCode, addGenerationHistory } from '@/lib/firebase';
+import { getTaskCodes, getProjectCodes, getProjectCode, addGenerationHistory } from '@/lib/firebase';
 import { auth } from '@/lib/firebase';
 
 export type FormState = {
@@ -160,8 +160,10 @@ export async function generateJiraTicketsAction(
   }
 
   try {
-    const projects = await getProjectCodesForUser(userId);
-    const projectInfo = projects.find((p) => p.name === project);
+    const allProjects = await getProjectCodes();
+    const userProjects = allProjects.filter(p => p.userId === userId);
+    
+    const projectInfo = userProjects.find((p) => p.name === project);
 
     if (!projectInfo || !projectInfo.id) {
       return {
@@ -177,9 +179,10 @@ export async function generateJiraTicketsAction(
 
     const projectKey = projectInfo.code;
     
-    const allTaskCodes = await getTaskCodesForUser(userId);
+    const allTaskCodes = await getTaskCodes();
+    const userTasks = allTaskCodes.filter(t => t.userId === userId);
 
-    const relevantTasks = allTaskCodes.filter(task => 
+    const relevantTasks = userTasks.filter(task => 
       selectedTasks.includes(task.id) &&
       (!task.projectIds || task.projectIds.length === 0 || task.projectIds.includes(projectInfo.id))
     );
