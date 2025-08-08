@@ -301,13 +301,11 @@ export async function createJiraTickets(
       tasks: tasks.map(t => t.name),
       aiUsed: hasUsedAi,
       aiCost: 0,
-      userId: userId, // Ensure userId is in the payload
+      userId: userId,
   };
 
   if (hasUsedAi) {
       historyPayload.aiModel = 'OpenAI';
-  } else {
-      delete historyPayload.aiModel;
   }
 
 
@@ -355,6 +353,8 @@ export async function createJiraTickets(
     // Update jiraLink in history payload
     historyPayload.jiraLink = `${url}/browse/${storyKey}`;
     
+    await addGenerationHistory(userId, historyPayload);
+
     for (const subtask of tasks) {
       const subtaskSummary = `${projectKey}_${storyNumber}_${subtask.type} ${subtask.name}`;
       
@@ -379,8 +379,6 @@ export async function createJiraTickets(
         console.warn(`[JIRA WARN] Failed to create subtask "${subtask.name}": ${errorData}`);
       }
     }
-    
-    await addGenerationHistory(userId, historyPayload);
 
     return {
       success: true,
