@@ -10,7 +10,7 @@ import {
   type TaskCode,
   type ProjectCode,
 } from '@/lib/types';
-import { addGenerationHistory, getProjectCodes, getTaskCodes } from '@/lib/firebase';
+import { addGenerationHistory, getProjectCodesForUser, getTaskCodesForUser } from '@/lib/firebase';
 import { auth } from '@/lib/firebase';
 
 export type FormState = {
@@ -141,7 +141,7 @@ export async function generateJiraTicketsAction(
     userId: formData.get('userId'),
     selectedTasks: formData.getAll('selectedTasks'), // These are now JSON strings of TaskCode
   };
-
+  
   const validatedFields = jiraStoryFormSchema.safeParse({
     ...data,
     project: data.project ? JSON.parse(data.project as string) : null,
@@ -155,7 +155,7 @@ export async function generateJiraTicketsAction(
       message: `Invalid form data: ${errorMessages}. Please check your inputs.`,
     };
   }
-
+  
   const { name, description, project, number, userId, selectedTasks } = validatedFields.data;
   const aiContext = description || '';
 
@@ -187,7 +187,6 @@ export async function generateJiraTicketsAction(
             };
         })
     );
-
 
     return {
       success: true,
@@ -267,12 +266,12 @@ export async function createJiraTickets(
     }
    }
 
-  const auth = Buffer.from(`${email}:${token}`).toString('base64');
-  const headers = {
-    Authorization: `Basic ${auth}`,
+  const authString = Buffer.from(`${email}:${token}`).toString('base64');
+  const headers = new Headers({
+    'Authorization': `Basic ${authString}`,
     'Content-Type': 'application/json',
-    Accept: 'application/json',
-  };
+    'Accept': 'application/json',
+  });
 
   try {
     const storySummary = `${projectKey}_${storyNumber} - ${storyName}`;
@@ -288,7 +287,7 @@ export async function createJiraTickets(
 
     const storyResponse = await fetch(`${url}/rest/api/2/issue`, {
       method: 'POST',
-      headers,
+      headers: headers,
       body: JSON.stringify(storyPayload),
     });
 
@@ -309,6 +308,9 @@ export async function createJiraTickets(
     const storyData = await storyResponse.json();
     const storyKey = storyData.key;
     
+    // The history record is now created on the client-side in GeneratedContent.tsx
+    // after a successful Jira ticket creation.
+
     for (const subtask of tasks) {
       const subtaskSummary = `${projectKey}_${storyNumber}_${subtask.type} ${subtask.name}`;
 
@@ -324,7 +326,7 @@ export async function createJiraTickets(
 
       const subtaskResponse = await fetch(`${url}/rest/api/2/issue`, {
         method: 'POST',
-        headers,
+        headers: headers,
         body: JSON.stringify(subtaskPayload),
       });
 
