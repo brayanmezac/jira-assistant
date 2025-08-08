@@ -39,6 +39,25 @@ export async function updateUserSettings(userId: string, settings: JiraSettings)
     await setDoc(docRef, settings);
 }
 
+// Users Collection
+export async function ensureUserDocument(user: import('firebase/auth').User) {
+    const userDocRef = doc(db, 'users', user.uid);
+    const userDoc = await getDoc(userDocRef);
+
+    if (userDoc.exists()) {
+        await setDoc(userDocRef, { lastLoginAt: serverTimestamp() }, { merge: true });
+    } else {
+        const userData = {
+            email: user.email,
+            displayName: user.displayName || user.email?.split('@')[0] || 'New User',
+            photoURL: user.photoURL,
+            createdAt: serverTimestamp(),
+            lastLoginAt: serverTimestamp(),
+        };
+        await setDoc(userDocRef, userData);
+    }
+}
+
 
 // Project Codes - User-specific
 export async function getProjectCodes(userId: string): Promise<ProjectCode[]> {
@@ -128,20 +147,28 @@ export async function deleteTaskCode(id: string) {
 
 // Generation History - Global
 export async function addGenerationHistory(
-  historyPayload: Omit<GenerationHistoryEntry, 'id' | 'createdAt'>
+  userId: string,
+  historyPayload: Omit<GenerationHistoryEntry, 'id' | 'createdAt' | 'userId'>
 ) {
     const dataToSave = {
         ...historyPayload,
+        userId: userId, // Explicitly add the userId
         createdAt: Timestamp.now(),
     };
     await addDoc(collection(db, 'generationHistory'), dataToSave);
 }
 
-export async function getGenerationHistory(): Promise<GenerationHistoryEntry[]> {
-    const q = query(
-        collection(db, 'generationHistory'),
-        orderBy('createdAt', 'desc')
-    );
+export async function getGenerationHistory(userId?: string): Promise<GenerationHistoryEntry[]> {
+    const historyRef = collection(db, 'generationHistory');
+    let q;
+
+    if (userId) {
+        // Query for a specific user's history
+        q = query(historyRef, where('userId', '==', userId), orderBy('createdAt', 'desc'));
+    } else {
+        // Query for all history
+        q = query(historyRef, orderBy('createdAt', 'desc'));
+    }
 
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => docToTyped<GenerationHistoryEntry>(doc));

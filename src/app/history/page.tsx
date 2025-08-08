@@ -66,8 +66,7 @@ export default function HistoryPage() {
     
     async function loadData() {
       try {
-        // Fetch all generation history, not just for the current user
-        const historyData = await getGenerationHistory();
+        const historyData = await getGenerationHistory(); // Get all history
         setHistory(historyData);
       } catch (error) {
         console.error("Failed to load generation history:", error);
