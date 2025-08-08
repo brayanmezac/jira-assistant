@@ -10,7 +10,7 @@ import {
   type TaskCode,
   type ProjectCode,
 } from '@/lib/types';
-import { addGenerationHistory } from '@/lib/firebase';
+import { addGenerationHistory, getProjectCodes, getTaskCodes } from '@/lib/firebase';
 import { auth } from '@/lib/firebase';
 
 export type FormState = {
@@ -274,17 +274,6 @@ export async function createJiraTickets(
     Accept: 'application/json',
   };
 
-  const hasUsedAi = (storyDescription.includes('<AI') && aiContext.trim().length > 0) || tasks.some(t => t.template?.includes('<AI') && aiContext.trim().length > 0);
-
-  const historyPayload = {
-      storyName: `${projectKey}_${storyNumber} - ${storyName}`,
-      jiraLink: '', // Will be updated after story creation
-      tasks: tasks.map(t => t.name),
-      aiUsed: hasUsedAi,
-      aiCost: 0,
-      ...(hasUsedAi && { aiModel: 'OpenAI' }),
-  };
-
   try {
     const storySummary = `${projectKey}_${storyNumber} - ${storyName}`;
 
@@ -320,14 +309,6 @@ export async function createJiraTickets(
     const storyData = await storyResponse.json();
     const storyKey = storyData.key;
     
-    // Update payload with the real link before saving
-    const fullHistoryPayload = {
-        ...historyPayload,
-        jiraLink: `${url}/browse/${storyKey}`,
-    };
-    
-    await addGenerationHistory(userId, fullHistoryPayload);
-
     for (const subtask of tasks) {
       const subtaskSummary = `${projectKey}_${storyNumber}_${subtask.type} ${subtask.name}`;
 

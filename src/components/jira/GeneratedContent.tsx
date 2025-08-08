@@ -12,6 +12,7 @@ import { createJiraTickets } from '@/app/actions';
 import type { TaskCode } from '@/lib/types';
 import { renderJiraMarkup } from '@/lib/jira-markup-renderer';
 import { useAuth } from '../auth/AuthProvider';
+import { addGenerationHistory } from '@/lib/firebase';
 
 type GeneratedContentProps = {
   storyDescription: string;
@@ -186,6 +187,20 @@ export function GeneratedContent({ storyDescription, storyName, projectKey, stor
 
         if (result.success && result.data) {
             const storyUrl = `${settings.url}/browse/${result.data.storyKey}`;
+            
+            // Write to history on success
+            const hasUsedAi = (storyDescription.includes('<AI') && aiContext.trim().length > 0) || tasks.some(t => t.template?.includes('<AI') && aiContext.trim().length > 0);
+            const historyPayload = {
+              storyName: `${projectKey}_${storyNumber} - ${storyName}`,
+              jiraLink: storyUrl,
+              tasks: tasks.map(t => t.name),
+              aiUsed: hasUsedAi,
+              aiCost: 0, // Placeholder
+              ...(hasUsedAi && { aiModel: 'OpenAI' }),
+            };
+            
+            await addGenerationHistory(userId, historyPayload);
+
             toast({
               title: t.successTitle,
               description: (
