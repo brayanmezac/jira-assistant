@@ -37,6 +37,21 @@ export function Login() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
 
+  const ensureUserDocument = async (user: import('firebase/auth').User) => {
+    const userDocRef = doc(db, 'users', user.uid);
+    const userDoc = await getDoc(userDocRef);
+
+    const userData = {
+      email: user.email,
+      displayName: user.displayName || user.email?.split('@')[0] || 'New User',
+      photoURL: user.photoURL,
+      lastLoginAt: serverTimestamp(),
+      ...(userDoc.exists() ? {} : { createdAt: serverTimestamp() }), // Add createdAt only if doc doesn't exist
+    };
+    
+    await setDoc(userDocRef, userData, { merge: true });
+  }
+
   useEffect(() => {
     if (authLoading) return;
     if (user) {
@@ -48,21 +63,7 @@ export function Login() {
       try {
         const result = await getRedirectResult(auth);
         if (result) {
-          // User is signed in via redirect. AuthProvider will handle the redirect to '/'.
-          // Ensure a user document exists on every sign-in.
-          const userDocRef = doc(db, 'users', result.user.uid);
-          // Use { merge: true } to create the doc if it doesn't exist,
-          // or to update it without overwriting existing fields like `createdAt`.
-          await setDoc(
-            userDocRef,
-            {
-              email: result.user.email,
-              displayName: result.user.displayName,
-              photoURL: result.user.photoURL,
-              lastLoginAt: serverTimestamp(),
-            },
-            { merge: true }
-          );
+          await ensureUserDocument(result.user);
         }
       } catch (redirectError: any) {
         console.error('Error getting redirect result:', redirectError);
@@ -101,15 +102,7 @@ export function Login() {
         email,
         password
       );
-      // Create a document for the user in Firestore to link auth with DB records.
-      // This is crucial for Firestore security rules to work correctly.
-      const userDocRef = doc(db, 'users', userCredential.user.uid);
-      await setDoc(userDocRef, {
-        email: userCredential.user.email,
-        displayName: userCredential.user.email?.split('@')[0] || 'New User', // Default display name
-        createdAt: serverTimestamp(),
-        lastLoginAt: serverTimestamp(),
-      });
+      await ensureUserDocument(userCredential.user);
       // AuthProvider will handle the redirect after successful registration
     } catch (manualError: any) {
       setError(`Registration failed: ${manualError.message}`);
@@ -124,11 +117,7 @@ export function Login() {
     setError(null);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      // On manual login, also ensure the user doc exists.
-      const userDocRef = doc(db, 'users', userCredential.user.uid);
-      await setDoc(userDocRef, {
-        lastLoginAt: serverTimestamp(),
-      }, { merge: true });
+      await ensureUserDocument(userCredential.user);
       // AuthProvider will handle the redirect
     } catch (manualError: any) {
       setError(`Login failed: ${manualError.message}`);
