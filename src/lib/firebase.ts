@@ -59,13 +59,13 @@ export async function ensureUserDocument(user: import('firebase/auth').User) {
 }
 
 
-// Project Codes - CLIENT-SIDE (reads entire collection)
+// Project Codes (Client-side use - for config pages)
 export async function getProjectCodes(): Promise<ProjectCode[]> {
     const snapshot = await getDocs(collection(db, 'projectCodes'));
     return snapshot.docs.map(doc => docToTyped<ProjectCode>(doc));
 }
 
-// Project Codes - SERVER-SIDE (reads only for a specific user)
+// Project Codes for a specific user (Server-side & Client-side use)
 export async function getProjectCodesForUser(userId: string): Promise<ProjectCode[]> {
     const q = query(collection(db, 'projectCodes'), where('userId', '==', userId));
     const snapshot = await getDocs(q);
@@ -98,13 +98,13 @@ export async function deleteProjectCode(id: string) {
     await deleteDoc(docRef);
 }
 
-// Task Codes - CLIENT-SIDE (reads entire collection)
+// Task Codes (Client-side use - for config pages)
 export async function getTaskCodes(): Promise<TaskCode[]> {
     const snapshot = await getDocs(query(collection(db, 'taskCodes'), orderBy('order')));
     return snapshot.docs.map(doc => docToTyped<TaskCode>(doc));
 }
 
-// Task Codes - SERVER-SIDE (reads only for a specific user)
+// Task Codes for a specific user (Server-side & Client-side use)
 export async function getTaskCodesForUser(userId: string): Promise<TaskCode[]> {
     const q = query(collection(db, 'taskCodes'), where('userId', '==', userId), orderBy('order'));
     const snapshot = await getDocs(q);

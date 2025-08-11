@@ -5,7 +5,7 @@ import { useFormContext, Controller } from 'react-hook-form';
 import type { z } from 'zod';
 import { jiraStoryFormSchema, type ProjectCode, type TaskCode } from '@/lib/types';
 import { useEffect, useState, useMemo } from 'react';
-import { getProjectCodes, getTaskCodes } from '@/lib/firebase';
+import { getProjectCodesForUser, getTaskCodesForUser } from '@/lib/firebase';
 
 import {
   Form,
@@ -215,15 +215,12 @@ export function GeneratorForm({ formAction }: GeneratorFormProps) {
  useEffect(() => {
       if (!user) return;
       const fetchProjectsAndTasks = async () => {
-          const [allProjectList, allTaskList] = await Promise.all([
-              getProjectCodes(),
-              getTaskCodes()
+          const [userProjects, userTasks] = await Promise.all([
+              getProjectCodesForUser(user.uid),
+              getTaskCodesForUser(user.uid)
           ]);
-
-          const userProjects = allProjectList.filter(p => p.userId === user.uid);
+          
           userProjects.sort((a,b) => a.name.localeCompare(b.name));
-
-          const userTasks = allTaskList.filter(t => t.userId === user.uid);
           
           setProjects(userProjects);
           setAllTasks(userTasks);
