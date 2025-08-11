@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { TaskCodes } from '@/components/codes/TaskCodes';
-import { getTaskCodes, getProjectCodes } from '@/lib/firebase';
+import { getTaskCodesForUser, getProjectCodesForUser } from '@/lib/firebase';
 import type { TaskCode, ProjectCode } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSettings } from '@/hooks/use-settings';
@@ -43,15 +43,11 @@ export default function TaskCodesPage() {
     if (!user) return;
     async function loadData() {
       try {
-        const [allTasks, allProjects] = await Promise.all([
-            getTaskCodes(),
-            getProjectCodes()
+        const [userTasks, userProjects] = await Promise.all([
+            getTaskCodesForUser(user.uid),
+            getProjectCodesForUser(user.uid)
         ]);
         
-        const userTasks = allTasks.filter(t => t.userId === user!.uid);
-        const userProjects = allProjects.filter(p => p.userId === user!.uid);
-
-        userTasks.sort((a, b) => a.name.localeCompare(b.name));
         userProjects.sort((a, b) => a.name.localeCompare(b.name));
 
         setTasks(userTasks);

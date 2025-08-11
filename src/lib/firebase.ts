@@ -1,6 +1,6 @@
 
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore, collection, getDocs, doc, addDoc, updateDoc, deleteDoc, type DocumentData, type WithFieldValue, setDoc, getDoc, query, where, orderBy, writeBatch, Timestamp } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, doc, addDoc, updateDoc, deleteDoc, type DocumentData, type WithFieldValue, setDoc, getDoc, query, where, orderBy, writeBatch, Timestamp, onSnapshot } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import type { ProjectCode, TaskCode, JiraSettings, GenerationHistoryEntry } from './types';
 
@@ -106,9 +106,11 @@ export async function getTaskCodes(): Promise<TaskCode[]> {
 
 // Task Codes for a specific user (Server-side & Client-side use)
 export async function getTaskCodesForUser(userId: string): Promise<TaskCode[]> {
-    const q = query(collection(db, 'taskCodes'), where('userId', '==', userId), orderBy('order'));
+    const q = query(collection(db, 'taskCodes'), where('userId', '==', userId));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => docToTyped<TaskCode>(doc));
+    const tasks = snapshot.docs.map(doc => docToTyped<TaskCode>(doc));
+    // Sort in-memory to avoid composite index
+    return tasks.sort((a, b) => (a.order || 0) - (b.order || 0));
 }
 
 
@@ -157,7 +159,7 @@ export async function deleteTaskCode(id: string) {
 
 // Generation History - Global
 export async function addGenerationHistory(
-  historyData: Omit<GenerationHistoryEntry, 'id' | 'createdAt'>
+  historyData: WithFieldValue<Omit<GenerationHistoryEntry, 'id' | 'createdAt'>>
 ) {
     const dataToSave = {
         ...historyData,
