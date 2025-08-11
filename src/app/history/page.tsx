@@ -3,13 +3,14 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/components/auth/AuthProvider';
-import { getGenerationHistory } from '@/lib/firebase';
+import { getGenerationHistory, db } from '@/lib/firebase';
 import type { GenerationHistoryEntry } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSettings } from '@/hooks/use-settings';
 import { HistoryAnalytics } from '@/components/history/HistoryAnalytics';
 import { HistoryTable } from '@/components/history/HistoryTable';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { collection, query, where, orderBy, onSnapshot, Unsubscribe } from 'firebase/firestore';
 
 function HistorySkeleton() {
   return (
@@ -58,23 +59,28 @@ export default function HistoryPage() {
   const t = translations[settings.language as keyof typeof translations] || translations.en;
 
   useEffect(() => {
-    // Only load history if a user is logged in
     if (!user) {
         setLoading(false);
+        setHistory([]);
         return;
     };
     
-    async function loadData() {
-      try {
-        const historyData = await getGenerationHistory(user.uid); // Pass the user's ID
+    setLoading(true);
+
+    const historyRef = collection(db, 'generationHistory');
+    const q = query(historyRef, where('userId', '==', user.uid), orderBy('createdAt', 'desc'));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        const historyData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GenerationHistoryEntry));
         setHistory(historyData);
-      } catch (error) {
-        console.error("Failed to load generation history:", error);
-      } finally {
         setLoading(false);
-      }
-    }
-    loadData();
+    }, (error) => {
+        console.error("Failed to subscribe to generation history:", error);
+        setLoading(false);
+    });
+
+    // Cleanup subscription on component unmount
+    return () => unsubscribe();
   }, [user]);
 
   return (
