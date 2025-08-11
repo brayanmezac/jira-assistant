@@ -68,17 +68,12 @@ export default function HistoryPage() {
     setLoading(true);
 
     const historyRef = collection(db, 'generationHistory');
-    // Query only by userId to avoid composite index requirement. Sorting will be done client-side.
-    const q = query(historyRef, where('userId', '==', user.uid));
+    // NOTE: This query requires a composite index on (userId, createdAt desc).
+    // Firestore should provide a link in the console to create it if it doesn't exist.
+    const q = query(historyRef, where('userId', '==', user.uid), orderBy('createdAt', 'desc'));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
         const historyData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GenerationHistoryEntry));
-        // Sort data by date client-side
-        historyData.sort((a, b) => {
-            const dateA = a.createdAt?.seconds || 0;
-            const dateB = b.createdAt?.seconds || 0;
-            return dateB - dateA; // Descending order
-        });
         setHistory(historyData);
         setLoading(false);
     }, (error) => {
