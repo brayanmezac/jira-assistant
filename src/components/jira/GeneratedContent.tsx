@@ -189,21 +189,23 @@ export function GeneratedContent({ storyDescription, storyName, projectKey, stor
             const storyUrl = `${settings.url}/browse/${result.data.storyKey}`;
             
             // Correctly determine AI usage and calculate cost.
-            const hasUsedAi = aiContext.trim().length > 0 && 
-                (storyDescription.includes('<AI') || tasks.some(t => t.template?.includes('<AI')));
+            const hasUsedAi = aiContext.trim().length > 0;
 
             // Placeholder for cost calculation.
             const estimatedCost = hasUsedAi ? (aiContext.length / 1000) * 0.005 : 0;
 
-            const historyPayload = {
+            const historyPayload: any = {
               userId: userId,
               storyName: `${projectKey}_${storyNumber} - ${storyName}`,
               jiraLink: storyUrl,
               tasks: tasks.map(t => t.name),
               aiUsed: hasUsedAi,
               aiCost: estimatedCost,
-              ...(hasUsedAi && { aiModel: 'OpenAI' }),
             };
+
+            if (hasUsedAi) {
+                historyPayload.aiModel = 'OpenAI';
+            }
             
             await addGenerationHistory(historyPayload);
 
