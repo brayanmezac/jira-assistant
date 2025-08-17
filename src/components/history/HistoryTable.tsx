@@ -42,7 +42,9 @@ export function HistoryTable({ history, jiraUrl }: { history: GenerationHistoryE
 
     const formatDate = (timestamp: any) => {
         if (!timestamp?.seconds) return 'N/A';
-        return new Date(timestamp.seconds * 1000).toLocaleString(settings.language, {
+        // Fallback to 'en-US' if settings.language is not available to prevent crash
+        const lang = settings.language || 'en-US';
+        return new Date(timestamp.seconds * 1000).toLocaleString(lang, {
             year: 'numeric',
             month: 'short',
             day: 'numeric',
